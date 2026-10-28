@@ -87,16 +87,41 @@
 
 ---
 
-## 🔑 الحسابات التجريبية السريعة (Demo Accounts)
+## 🔑 بيانات تسجيل الدخول وكلمة المرور الموحدة
 
-| الموظف | البريد الوظيفي | كلمة المرور | الدور | الفريق |
-| :--- | :--- | :--- | :--- | :--- |
-| **محمود هاشم** | `mahmoud.hashim@samaagroup.net` | `mahmoud123` | مالك CRM (Admin) | Admin |
-| **احمد طه** | `a.taha@samaagroup.net` | `taha123` | مدير CRM | Sales |
-| **حازم خالد** | `hazem.khaled@samaagroup.net` | `hazem123` | مالك CRM | TS |
-| **سلمى عصام** | `salma.essam@samaagroup.net` | `salma123` | وكيل CRM | TS |
-| **محمد رجب** | `mohamed.ragab@samaagroup.net` | `ragab123` | مشرف CRM | Sales |
-| **مدير الموارد البشرية** | `hr.admin@samaagroup.net` | `hradmin2024` | HR Admin | Admin |
+> 💡 **كلمة المرور الموحدة لجميع الموظفين:** `mora123`  
+> يستطيع أي موظف تسجيل الدخول باستخدام بريده الوظيفي الرسمي وكلمة المرور الموحدة `mora123`.
+
+### 👑 صاحب المنصة والإدارة العليا (Platform Owner)
+| الاسم | البريد الإلكتروني | كلمة المرور | الصلاحية والدور |
+| :--- | :--- | :--- | :--- |
+| **محمود هاشم** | `mahmoud@tieapps.com` | `mora123` | **صاحب المنصة والمدير العام (Super Admin)** — تحكم كامل بجميع الإعدادات والتقييمات |
+| **محمود هاشم** | `mahmoud.hashim@samaagroup.net` | `mora123` | **مالك CRM (Admin)** — تقييمات الفريق ولوحة الإدارة |
+| **إدارة الموارد البشرية** | `hr.admin@samaagroup.net` | `mora123` | **HR Admin** — لوحة المتابعة الشاملة ومحرك التحليل |
+
+---
+
+### 👥 قائمة الـ 17 موظفاً المعتمدة (شركة مراسلاتي ومجموعة سماء)
+
+| # | الموظف | البريد الوظيفي الرسمي | كلمة المرور | الدور الوظيفي | الفريق |
+| :-: | :--- | :--- | :--- | :--- | :--- |
+| 1 | **حازم خالد** | `hazem.khaled@samaagroup.net` | `mora123` | مالك CRM | TS |
+| 2 | **ابراهيم ناصر** | `ibrahim.nasser@samaagroup.net` | `mora123` | مالك CRM | TS |
+| 3 | **أحمد هاشم** | `a.hashim@samaagroup.net` | `mora123` | مالك CRM | TS |
+| 4 | **احمد طارق** | `ahmed.tarek@samaagroup.net` | `mora123` | مالك CRM | TS |
+| 5 | **بهاء الدين أيمن** | `bahaa.ayman@samaagroup.net` | `mora123` | مالك CRM | TS |
+| 6 | **زياد ماضي** | `ziad.mady@samaagroup.net` | `mora123` | مالك CRM | TS |
+| 7 | **عبد الرحمن خالد** | `abdelrahman@samaagroup.net` | `mora123` | مالك CRM | TS |
+| 8 | **محمود هاشم** | `mahmoud.hashim@samaagroup.net` | `mora123` | مالك CRM (Admin) | Admin |
+| 9 | **احمد طه** | `a.taha@samaagroup.net` | `mora123` | مدير CRM | Sales |
+| 10 | **محمد رجب** | `mohamed.ragab@samaagroup.net` | `mora123` | مشرف CRM | Sales |
+| 11 | **ابراهيم حسن** | `ibrahim.hassan@samaagroup.net` | `mora123` | وكيل CRM | Admin |
+| 12 | **اسراء حامد** | `esraa.hamed@samaagroup.net` | `mora123` | وكيل CRM | Sales |
+| 13 | **سلمى عصام** | `salma.essam@samaagroup.net` | `mora123` | وكيل CRM | TS |
+| 14 | **فاطمة شبانة** | `fatma.shabana@samaagroup.net` | `mora123` | وكيل CRM | Admin |
+| 15 | **محمد رفاعي** | `mohamed.refaay@samaagroup.net` | `mora123` | وكيل CRM | TS |
+| 16 | **محمد عزت** | `mohamed.ezzat@samaagroup.net` | `mora123` | وكيل CRM | Sales |
+| 17 | **محمد فراج** | `m.farrag@samaagroup.net` | `mora123` | وكيل CRM | TS |
 
 ---
 

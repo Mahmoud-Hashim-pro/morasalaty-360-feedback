@@ -175,40 +175,63 @@ const EMPLOYEES = [
   }
 ];
 
-// كلمات مرور تجريبية سريعة
+// كلمة المرور الموحدة السهلة لجميع الموظفين
+const UNIFORM_PASSWORD = "mora123";
+
+// خريطة كلمات المرور المعتمدة لجميع الحسابات
 const DEMO_PASSWORDS = {
-  "hazem.khaled@samaagroup.net":    "hazem123",
-  "ibrahim.nasser@samaagroup.net":  "ibrahim123",
-  "a.hashim@samaagroup.net":        "hashim123",
-  "ahmed.tarek@samaagroup.net":     "ahmed123",
-  "bahaa.ayman@samaagroup.net":     "bahaa123",
-  "ziad.mady@samaagroup.net":       "ziad123",
-  "abdelrahman@samaagroup.net":     "abdel123",
-  "mahmoud.hashim@samaagroup.net":  "mahmoud123",
-  "a.taha@samaagroup.net":          "taha123",
-  "mohamed.ragab@samaagroup.net":   "ragab123",
-  "ibrahim.hassan@samaagroup.net":  "hassan123",
-  "esraa.hamed@samaagroup.net":     "esraa123",
-  "salma.essam@samaagroup.net":     "salma123",
-  "fatma.shabana@samaagroup.net":   "fatma123",
-  "mohamed.refaay@samaagroup.net":  "refaay123",
-  "mohamed.ezzat@samaagroup.net":   "ezzat123",
-  "m.farrag@samaagroup.net":        "farrag123",
-  // حساب HR الإداري
-  "hr.admin@samaagroup.net":        "hradmin2024",
-  "hr.admin@morasalaty.com":        "hradmin2024",
+  // صاحب المنصة والمدير العام (Super Admin / Owner)
+  "mahmoud@tieapps.com":           "mora123",
+  
+  // الـ 17 موظفاً (كلمة مرور موحدة سهلة للإرسال: mora123)
+  "hazem.khaled@samaagroup.net":    "mora123",
+  "ibrahim.nasser@samaagroup.net":  "mora123",
+  "a.hashim@samaagroup.net":        "mora123",
+  "ahmed.tarek@samaagroup.net":     "mora123",
+  "bahaa.ayman@samaagroup.net":     "mora123",
+  "ziad.mady@samaagroup.net":       "mora123",
+  "abdelrahman@samaagroup.net":     "mora123",
+  "mahmoud.hashim@samaagroup.net":  "mora123",
+  "a.taha@samaagroup.net":          "mora123",
+  "mohamed.ragab@samaagroup.net":   "mora123",
+  "ibrahim.hassan@samaagroup.net":  "mora123",
+  "esraa.hamed@samaagroup.net":     "mora123",
+  "salma.essam@samaagroup.net":     "mora123",
+  "fatma.shabana@samaagroup.net":   "mora123",
+  "mohamed.refaay@samaagroup.net":  "mora123",
+  "mohamed.ezzat@samaagroup.net":   "mora123",
+  "m.farrag@samaagroup.net":        "mora123",
+
+  // حساب إدارة الموارد البشرية
+  "hr.admin@samaagroup.net":        "mora123",
+  "hr.admin@morasalaty.com":        "mora123"
 };
 
-// دور الـ HR Admin
+// حساب صاحب المنصة والمدير العام
+const SUPER_ADMIN = {
+  id: 99,
+  name: "محمود هاشم",
+  email: "mahmoud@tieapps.com",
+  role: "مالك المنصة والمدير العام (Platform Owner & Super Admin)",
+  team: "Admin",
+  isManager: true,
+  managerId: null,
+  isHRAdmin: true,
+  isSuperAdmin: true,
+  channels: { instagram: true, otherEmail: true, twitter: true, samaaChat: true, morasalatyChat: true, messenger: true, whatsappMorasalaty: true, whatsappSamaa: true }
+};
+
+// حساب HR Admin الإداري
 const HR_ADMIN = {
   id: 0,
   name: "مدير الموارد البشرية",
   email: "hr.admin@samaagroup.net",
   role: "HR Admin",
   team: "Admin",
-  isHRAdmin: true
+  isHRAdmin: true,
+  isManager: true
 };
 
 if (typeof module !== 'undefined') {
-  module.exports = { EMPLOYEES, DEMO_PASSWORDS, HR_ADMIN };
+  module.exports = { EMPLOYEES, DEMO_PASSWORDS, UNIFORM_PASSWORD, HR_ADMIN, SUPER_ADMIN };
 }

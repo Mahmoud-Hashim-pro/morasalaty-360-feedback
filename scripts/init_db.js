@@ -1,5 +1,5 @@
 const { neon } = require('@neondatabase/serverless');
-const { EMPLOYEES, DEMO_PASSWORDS, HR_ADMIN } = require('../data/employees');
+const { EMPLOYEES, DEMO_PASSWORDS, UNIFORM_PASSWORD, HR_ADMIN, SUPER_ADMIN } = require('../data/employees');
 const crypto = require('crypto');
 
 const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_AMyt3kIFUh0O@ep-misty-wave-baad1xpc-pooler.c-8.eu-central-1.aws.neon.tech/neondb?sslmode=require';
@@ -89,11 +89,37 @@ async function init() {
     ON CONFLICT (id) DO NOTHING;
   `;
 
-  // 7. Seed Employees + HR Admin
-  console.log('🌱 Seeding 17 employees and HR Admin...');
+  // 7. Seed Employees + HR Admin + Super Admin (mahmoud@tieapps.com)
+  console.log('🌱 Seeding 17 employees, HR Admin, and Super Admin...');
 
-  // HR Admin first
-  const hrPassHash = hashPassword(DEMO_PASSWORDS['hr.admin@samaagroup.net'] || 'hradmin2024');
+  // Platform Owner / Super Admin (mahmoud@tieapps.com)
+  const superPassHash = hashPassword(DEMO_PASSWORDS['mahmoud@tieapps.com'] || 'mora123');
+  await sql`
+    INSERT INTO m360_users (id, name, email, role, team, is_manager, manager_id, channels, is_hr_admin, password_hash)
+    VALUES (
+      ${SUPER_ADMIN.id}, 
+      ${SUPER_ADMIN.name}, 
+      ${SUPER_ADMIN.email}, 
+      ${SUPER_ADMIN.role}, 
+      ${SUPER_ADMIN.team}, 
+      TRUE, 
+      NULL, 
+      ${JSON.stringify(SUPER_ADMIN.channels || {})}::jsonb, 
+      TRUE, 
+      ${superPassHash}
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      name = EXCLUDED.name,
+      email = EXCLUDED.email,
+      role = EXCLUDED.role,
+      team = EXCLUDED.team,
+      is_manager = TRUE,
+      is_hr_admin = TRUE,
+      password_hash = EXCLUDED.password_hash;
+  `;
+
+  // HR Admin
+  const hrPassHash = hashPassword(DEMO_PASSWORDS['hr.admin@samaagroup.net'] || 'mora123');
   await sql`
     INSERT INTO m360_users (id, name, email, role, team, is_manager, manager_id, channels, is_hr_admin, password_hash)
     VALUES (
@@ -102,7 +128,7 @@ async function init() {
       ${HR_ADMIN.email}, 
       ${HR_ADMIN.role}, 
       ${HR_ADMIN.team}, 
-      FALSE, 
+      TRUE, 
       NULL, 
       '{}'::jsonb, 
       TRUE, 
@@ -115,9 +141,9 @@ async function init() {
       password_hash = EXCLUDED.password_hash;
   `;
 
-  // 17 Employees
+  // 17 Employees (Uniform password: mora123)
   for (const emp of EMPLOYEES) {
-    const rawPwd = DEMO_PASSWORDS[emp.email] || `${emp.email.split('@')[0]}123`;
+    const rawPwd = DEMO_PASSWORDS[emp.email] || 'mora123';
     const pwdHash = hashPassword(rawPwd);
     await sql`
       INSERT INTO m360_users (id, name, email, role, team, is_manager, manager_id, channels, is_hr_admin, password_hash)
@@ -144,7 +170,7 @@ async function init() {
         password_hash = EXCLUDED.password_hash;
     `;
   }
-  console.log('✅ All 17 employees and HR Admin successfully seeded/updated.');
+  console.log('✅ All 17 employees, HR Admin, and Super Admin (mahmoud@tieapps.com) successfully seeded/updated.');
 
   // 8. Seed realistic evaluation samples if few evaluations exist
   const existingCountRes = await sql`SELECT COUNT(*)::int as count FROM m360_evaluations;`;

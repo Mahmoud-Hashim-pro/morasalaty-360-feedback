@@ -56,8 +56,28 @@ async function runTests() {
     assert.strictEqual(emps.data.employees.length, 17);
     console.log(`   ✅ /api/employees passed! Total employees: ${emps.data.employees.length}`);
 
-    // 3. Login test - Mahmoud Hashim
-    console.log('3️⃣ Testing /api/auth/login with Mahmoud Hashim...');
+    // 3. Login test - Platform Owner / Super Admin (mahmoud@tieapps.com)
+    console.log('3️⃣ Testing /api/auth/login with Platform Owner (mahmoud@tieapps.com)...');
+    const ownerRes = await request({
+      hostname: 'localhost',
+      port: PORT,
+      path: '/api/auth/login',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }, {
+      email: 'mahmoud@tieapps.com',
+      password: 'mora123'
+    });
+    assert.strictEqual(ownerRes.status, 200);
+    assert.strictEqual(ownerRes.data.ok, true);
+    assert.ok(ownerRes.data.token, 'Token must be present');
+    assert.strictEqual(ownerRes.data.user.email, 'mahmoud@tieapps.com');
+    assert.strictEqual(ownerRes.data.user.isHRAdmin, true);
+    assert.strictEqual(ownerRes.data.user.isSuperAdmin, true);
+    console.log('   ✅ /api/auth/login passed for Platform Owner (mahmoud@tieapps.com)!');
+
+    // 3b. Login test - Uniform password (mora123) with employee
+    console.log('3️⃣b Testing /api/auth/login with uniform password (mora123)...');
     const loginRes = await request({
       hostname: 'localhost',
       port: PORT,
@@ -65,14 +85,14 @@ async function runTests() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     }, {
-      email: 'mahmoud.hashim@samaagroup.net',
-      password: 'mahmoud123'
+      email: 'hazem.khaled@samaagroup.net',
+      password: 'mora123'
     });
     assert.strictEqual(loginRes.status, 200);
     assert.strictEqual(loginRes.data.ok, true);
-    assert.ok(loginRes.data.token, 'Token must be present');
-    assert.strictEqual(loginRes.data.user.id, 8);
+    assert.strictEqual(loginRes.data.user.id, 1);
     const token = loginRes.data.token;
+    console.log('   ✅ Uniform password (mora123) verified successfully!');
     console.log('   ✅ /api/auth/login passed! Token generated successfully.');
 
     // 4. Auth Me test
@@ -86,7 +106,7 @@ async function runTests() {
     });
     assert.strictEqual(meRes.status, 200);
     assert.strictEqual(meRes.data.ok, true);
-    assert.strictEqual(meRes.data.user.email, 'mahmoud.hashim@samaagroup.net');
+    assert.strictEqual(meRes.data.user.email, 'hazem.khaled@samaagroup.net');
     console.log('   ✅ /api/auth/me passed!');
 
     // 5. Evaluations list test
@@ -101,8 +121,8 @@ async function runTests() {
     assert.strictEqual(evalsRes.status, 200);
     assert.strictEqual(evalsRes.data.ok, true);
     assert.strictEqual(evalsRes.data.colleagues.length, 16);
-    // Strict self-exclusion check: Mahmoud Hashim (id: 8) must NOT be in the colleagues list
-    const foundSelf = evalsRes.data.colleagues.find(c => c.employee.id === 8);
+    // Strict self-exclusion check: Hazem Khaled (id: 1) must NOT be in the colleagues list
+    const foundSelf = evalsRes.data.colleagues.find(c => c.employee.id === 1);
     assert.strictEqual(foundSelf, undefined, 'Self must never be present in evaluation colleagues list');
     console.log(`   ✅ /api/evaluations passed! Self excluded, 16 colleagues returned.`);
 
@@ -118,7 +138,7 @@ async function runTests() {
         'Authorization': `Bearer ${token}`
       }
     }, {
-      evaluateeId: 1, // Hazem Khaled
+      evaluateeId: 2, // Ibrahim Nasser
       moduleAnswers: { m1: { q1: 5, q2: 5, q3: 4 } },
       textAnswers: { m1: 'تعاون ممتاز وتقييم اختباري للتأكد من الحفظ الفعلي' },
       managerAnswers: {},
@@ -140,7 +160,7 @@ async function runTests() {
         'Authorization': `Bearer ${token}`
       }
     }, {
-      evaluateeId: 8, // Mahmoud Hashim himself
+      evaluateeId: 1, // Hazem Khaled himself
       moduleAnswers: { m1: { q1: 5 } }
     });
     assert.strictEqual(selfEvalRes.status, 403, 'Self evaluation must be strictly forbidden (403)');
