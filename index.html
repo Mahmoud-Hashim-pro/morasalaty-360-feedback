@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مراسلاتي 360° — نظام التقييم المتبادل</title>
+<style>
+:root{--primary:#4F46E5;--primary-light:#818CF8;--primary-dark:#3730A3;--secondary:#059669;--warning:#D97706;--danger:#DC2626;--success:#16A34A;--bg:#F8FAFC;--card:#FFFFFF;--border:#E2E8F0;--text:#1E293B;--text-muted:#64748B;--text-light:#94A3B8;--shadow:0 1px 3px rgba(0,0,0,.1);--shadow-md:0 4px 6px -1px rgba(0,0,0,.1);--shadow-lg:0 10px 15px -3px rgba(0,0,0,.1);--radius:12px;--radius-sm:8px;--t:all .2s ease;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);direction:rtl;min-height:100vh;}
+.hidden{display:none!important;}
+/* ---- BUTTONS ---- */
+.btn{padding:10px 22px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:.9rem;font-weight:600;transition:var(--t);display:inline-flex;align-items:center;gap:6px;text-decoration:none;}
+.btn-primary{background:var(--primary);color:white;}.btn-primary:hover{background:var(--primary-dark);}
+.btn-secondary{background:var(--secondary);color:white;}.btn-secondary:hover{background:#047857;}
+.btn-outline{background:transparent;color:var(--primary);border:2px solid var(--primary);}.btn-outline:hover{background:#EEF2FF;}
+.btn-danger{background:var(--danger);color:white;}.btn-danger:hover{background:#B91C1C;}
+.btn-ghost{background:transparent;color:var(--text-muted);}.btn-ghost:hover{background:var(--border);}
+.btn-sm{padding:6px 14px;font-size:.82rem;}
+.btn-lg{padding:14px 32px;font-size:1rem;}
+/* ---- SCREENS ---- */
+.screen{display:none;min-height:100vh;}
+.screen.active{display:block;}
+/* ========== LOGIN ========== */
+#screen-login{background:linear-gradient(135deg,#1E1B4B 0%,#4F46E5 50%,#7C3AED 100%);display:flex;align-items:center;justify-content:center;}
+#screen-login.active{display:flex;}
+.login-card{background:white;border-radius:20px;padding:40px;width:100%;max-width:420px;box-shadow:0 25px 50px rgba(0,0,0,.3);margin:20px;}
+.login-logo{text-align:center;margin-bottom:28px;}
+.login-logo .logo-icon{font-size:3.5rem;display:block;margin-bottom:8px;}
+.login-logo h1{font-size:1.6rem;font-weight:800;color:var(--primary);margin-bottom:4px;}
+.login-logo p{font-size:.85rem;color:var(--text-muted);}
+.form-group{margin-bottom:18px;}
+.form-group label{display:block;font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:6px;}
+.form-group input{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:.95rem;direction:rtl;transition:var(--t);background:var(--bg);}
+.form-group input:focus{outline:none;border-color:var(--primary);background:white;box-shadow:0 0 0 3px rgba(79,70,229,.1);}
+.form-error{color:var(--danger);font-size:.82rem;margin-top:6px;display:none;}
+.login-hint{background:#EEF2FF;border-radius:var(--radius-sm);padding:12px;font-size:.78rem;color:var(--primary-dark);margin-bottom:18px;line-height:1.6;}
+.login-hint strong{display:block;margin-bottom:4px;}
+/* ========== TOPBAR ========== */
+.topbar{background:var(--primary);color:white;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-md);}
+.topbar-brand{font-size:1.1rem;font-weight:800;display:flex;align-items:center;gap:10px;}
+.topbar-brand .brand-icon{font-size:1.4rem;}
+.topbar-right{display:flex;align-items:center;gap:16px;}
+.topbar-user{display:flex;align-items:center;gap:8px;font-size:.85rem;}
+.topbar-avatar{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;}
+.topbar-btn{background:rgba(255,255,255,.15);border:none;color:white;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:.83rem;font-weight:600;transition:var(--t);}
+.topbar-btn:hover{background:rgba(255,255,255,.25);}
+/* ========== DASHBOARD ========== */
+#screen-dashboard{background:var(--bg);}
+.dash-header{padding:28px 28px 0;}
+.dash-welcome{font-size:1.4rem;font-weight:800;color:var(--text);margin-bottom:4px;}
+.dash-sub{font-size:.9rem;color:var(--text-muted);}
+.dash-progress-bar{background:#E0E7FF;height:8px;border-radius:100px;margin:16px 28px 0;overflow:hidden;}
+.dash-progress-fill{background:var(--primary);height:100%;border-radius:100px;transition:width .6s ease;}
+.dash-progress-label{padding:6px 28px 0;font-size:.78rem;color:var(--text-muted);}
+.dash-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:20px 28px;}
+.stat-card{background:white;border-radius:var(--radius);padding:20px;border:1px solid var(--border);box-shadow:var(--shadow);}
+.stat-icon{font-size:1.8rem;margin-bottom:8px;}
+.stat-value{font-size:1.7rem;font-weight:800;color:var(--primary);}
+.stat-label{font-size:.78rem;color:var(--text-muted);margin-top:2px;}
+.colleagues-section{padding:0 28px 28px;}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.section-title{font-size:1rem;font-weight:700;color:var(--text);}
+.filter-tabs{display:flex;gap:6px;}
+.filter-tab{padding:6px 14px;border-radius:100px;border:1px solid var(--border);background:white;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--text-muted);transition:var(--t);}
+.filter-tab.active{background:var(--primary);color:white;border-color:var(--primary);}
+.colleagues-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.colleague-card{background:white;border-radius:var(--radius);border:1px solid var(--border);padding:18px;cursor:pointer;transition:var(--t);box-shadow:var(--shadow);}
+.colleague-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--primary-light);}
+.colleague-card.completed{border-right:4px solid var(--success);}
+.colleague-card.in-progress{border-right:4px solid var(--warning);}
+.colleague-card.not-started{border-right:4px solid var(--border);}
+.colleague-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.colleague-avatar{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;color:white;flex-shrink:0;}
+.colleague-info{flex:1;margin-right:12px;}
+.colleague-name{font-size:.95rem;font-weight:700;color:var(--text);}
+.colleague-role{font-size:.75rem;color:var(--text-muted);margin-top:2px;}
+.status-badge{padding:3px 10px;border-radius:100px;font-size:.7rem;font-weight:700;white-space:nowrap;}
+.badge-completed{background:#DCFCE7;color:#15803D;}
+.badge-in-progress{background:#FEF3C7;color:#92400E;}
+.badge-not-started{background:#F1F5F9;color:#64748B;}
+.colleague-team{font-size:.75rem;color:var(--text-muted);margin-bottom:10px;}
+.colleague-progress{display:flex;align-items:center;gap:8px;}
+.progress-bar{flex:1;background:#F1F5F9;height:6px;border-radius:100px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:100px;transition:width .4s;}
+.progress-text{font-size:.72rem;color:var(--text-muted);white-space:nowrap;}
+/* ========== SURVEY ========== */
+#screen-survey{background:var(--bg);}
+.survey-layout{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 60px);}
+.survey-sidebar{background:white;border-left:1px solid var(--border);padding:20px 16px;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto;}
+.survey-evaluatee{text-align:center;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.evaluatee-avatar{width:60px;height:60px;border-radius:16px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:white;}
+.evaluatee-name{font-size:1rem;font-weight:700;}
+.evaluatee-role{font-size:.78rem;color:var(--text-muted);margin-top:2px;}
+.sidebar-progress{margin-bottom:16px;}
+.sidebar-progress-label{font-size:.78rem;color:var(--text-muted);margin-bottom:6px;}
+.sidebar-modules{display:flex;flex-direction:column;gap:4px;}
+.sidebar-module{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:var(--t);font-size:.82rem;}
+.sidebar-module:hover{background:var(--bg);}
+.sidebar-module.active{background:#EEF2FF;color:var(--primary);font-weight:600;}
+.sidebar-module.done{color:var(--success);}
+.sidebar-module-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;}
+.sidebar-module-check{margin-right:auto;font-size:.8rem;}
+.survey-main{padding:28px;}
+.survey-module-header{margin-bottom:24px;}
+.module-title-row{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+.module-icon-big{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+.module-title{font-size:1.2rem;font-weight:800;}
+.module-desc{font-size:.85rem;color:var(--text-muted);}
+.module-progress{display:flex;align-items:center;gap:10px;margin-top:12px;}
+.module-progress-bar{flex:1;background:#E2E8F0;height:8px;border-radius:100px;overflow:hidden;}
+.module-progress-fill{height:100%;border-radius:100px;transition:width .4s;}
+.module-progress-text{font-size:.78rem;color:var(--text-muted);white-space:nowrap;}
+.questions-list{display:flex;flex-direction:column;gap:16px;}
+.question-card{background:white;border-radius:var(--radius);border:1px solid var(--border);padding:20px;box-shadow:var(--shadow);transition:var(--t);}
+.question-card.answered{border-color:#C7D2FE;}
+.question-card.required-error{border-color:var(--danger);box-shadow:0 0 0 2px rgba(220,38,38,.15);}
+.question-num{font-size:.72rem;font-weight:700;color:var(--text-light);margin-bottom:6px;}
+.question-text{font-size:.9rem;font-weight:600;color:var(--text);line-height:1.6;margin-bottom:14px;}
+.question-text .emp-name{color:var(--primary);font-weight:800;}
+.scale-options{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+@media(max-width:700px){.scale-options{grid-template-columns:1fr 1fr;}}
+.scale-option{position:relative;}
+.scale-option input{position:absolute;opacity:0;pointer-events:none;}
+.scale-label{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 6px;border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:var(--t);text-align:center;min-height:64px;gap:4px;}
+.scale-label:hover{border-color:var(--primary-light);background:#F8FAFF;}
+.scale-option input:checked + .scale-label{border-color:var(--primary);background:#EEF2FF;}
+.scale-num{font-size:1.1rem;font-weight:800;color:var(--text-muted);}
+.scale-text{font-size:.68rem;color:var(--text-muted);line-height:1.3;}
+.scale-option input:checked + .scale-label .scale-num{color:var(--primary);}
+.scale-option input:checked + .scale-label .scale-text{color:var(--primary-dark);}
+.scale-option.na .scale-label{background:#FAFAFA;}
+.scale-option.na input:checked + .scale-label{background:#FFF7ED;border-color:var(--warning);}
+.scale-option.na input:checked + .scale-label .scale-num{color:var(--warning);}
+.text-answer{width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:.88rem;resize:vertical;min-height:80px;direction:rtl;font-family:inherit;transition:var(--t);}
+.text-answer:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,.1);}
+.optional-badge{font-size:.68rem;background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:100px;font-weight:700;margin-right:8px;}
+.survey-nav{display:flex;justify-content:space-between;align-items:center;padding:20px 28px;background:white;border-top:1px solid var(--border);position:sticky;bottom:0;}
+.survey-nav-info{font-size:.82rem;color:var(--text-muted);}
+/* ---- MANAGER QUESTIONS ---- */
+.manager-section{background:#EEF2FF;border:1px solid #C7D2FE;border-radius:var(--radius);padding:20px;margin-top:24px;}
+.manager-section-title{font-size:.9rem;font-weight:700;color:var(--primary-dark);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+/* ========== HR DASHBOARD ========== */
+#screen-hr{background:var(--bg);}
+.hr-layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 60px);}
+.hr-sidebar{background:white;border-left:1px solid var(--border);padding:16px;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto;}
+.hr-nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:var(--t);font-size:.88rem;font-weight:600;color:var(--text-muted);margin-bottom:4px;}
+.hr-nav-item:hover{background:var(--bg);color:var(--text);}
+.hr-nav-item.active{background:#EEF2FF;color:var(--primary);}
+.hr-nav-icon{font-size:1rem;width:24px;text-align:center;}
+.hr-main{padding:28px;overflow-y:auto;}
+.hr-section{display:none;}
+.hr-section.active{display:block;}
+.hr-section-title{font-size:1.2rem;font-weight:800;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+/* HR Overview Cards */
+.hr-overview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.hr-stat{background:white;border-radius:var(--radius);padding:20px;border:1px solid var(--border);box-shadow:var(--shadow);}
+.hr-stat-icon{font-size:2rem;margin-bottom:8px;}
+.hr-stat-value{font-size:2rem;font-weight:800;color:var(--primary);}
+.hr-stat-label{font-size:.78rem;color:var(--text-muted);}
+/* Completion Table */
+.completion-table{background:white;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px;}
+.completion-table table{width:100%;border-collapse:collapse;font-size:.85rem;}
+.completion-table th{background:#F8FAFC;padding:12px 16px;text-align:right;font-weight:700;color:var(--text-muted);font-size:.78rem;border-bottom:2px solid var(--border);}
+.completion-table td{padding:12px 16px;border-bottom:1px solid var(--border);}
+.completion-table tr:last-child td{border-bottom:none;}
+.completion-table tr:hover td{background:#FAFBFF;}
+.mini-progress{display:flex;align-items:center;gap:8px;}
+.mini-bar{flex:1;background:#F1F5F9;height:8px;border-radius:100px;overflow:hidden;}
+.mini-fill{height:100%;border-radius:100px;transition:width .4s;}
+/* Employee Detail */
+.emp-detail-header{display:flex;align-items:center;gap:16px;margin-bottom:24px;background:white;padding:20px;border-radius:var(--radius);border:1px solid var(--border);}
+.emp-detail-avatar{width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;color:white;}
+.emp-detail-name{font-size:1.2rem;font-weight:800;}
+.emp-detail-meta{font-size:.85rem;color:var(--text-muted);margin-top:4px;}
+.module-scores-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px;}
+.module-score-card{background:white;border-radius:var(--radius);border:1px solid var(--border);padding:16px;display:flex;align-items:center;gap:12px;}
+.module-score-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
+.module-score-info{flex:1;}
+.module-score-name{font-size:.82rem;font-weight:700;}
+.module-score-bar{display:flex;align-items:center;gap:6px;margin-top:6px;}
+.module-bar-track{flex:1;background:#F1F5F9;height:8px;border-radius:100px;overflow:hidden;}
+.module-bar-fill{height:100%;border-radius:100px;}
+.module-score-num{font-size:.9rem;font-weight:800;min-width:32px;text-align:center;}
+/* Score Pill */
+.score-pill{display:inline-flex;align-items:center;justify-content:center;padding:3px 10px;border-radius:6px;font-size:.82rem;font-weight:700;}
+.s1{background:#FEE2E2;color:#991B1B}.s2{background:#FEF3C7;color:#92400E}.s3{background:#DBEAFE;color:#1E40AF}.s4{background:#D1FAE5;color:#065F46}.s5{background:#EDE9FE;color:#4C1D95}
+/* Radar SVG */
+.radar-container{background:white;border-radius:var(--radius);border:1px solid var(--border);padding:20px;display:flex;justify-content:center;margin-bottom:24px;}
+/* Relationship Badges */
+.badge-rel{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;}
+.badge-rel-manager{background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;}
+.badge-rel-report{background:#E0E7FF;color:#3730A3;border:1px solid #C7D2FE;}
+.badge-rel-team{background:#DCFCE7;color:#166534;border:1px solid #BBF7D0;}
+.badge-rel-peer{background:#F1F5F9;color:#475569;border:1px solid #E2E8F0;}
+/* Drag & Drop Builder Styles */
+.dd-layout{display:grid;grid-template-columns:260px 1fr;gap:20px;align-items:start;}
+.dd-sidebar{background:white;border-radius:var(--radius);border:1px solid var(--border);padding:16px;box-shadow:var(--shadow);}
+.dd-search{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.85rem;margin-bottom:12px;direction:rtl;font-family:inherit;}
+.dd-metrics-list{max-height:480px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+.dd-category{font-size:0.72rem;font-weight:700;color:var(--text-light);text-transform:uppercase;margin:10px 0 4px;padding:0 4px;}
+.dd-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#F8FAFC;border:1px solid var(--border);border-radius:8px;cursor:grab;transition:var(--t);user-select:none;}
+.dd-item:hover{background:#EEF2FF;border-color:var(--primary-light);transform:translateY(-1px);}
+.dd-item.dragging{opacity:0.4;}
+.dd-item-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;}
+.dd-item-name{font-size:0.82rem;font-weight:600;flex:1;}
+.dd-item-badge{font-size:0.65rem;padding:2px 6px;border-radius:4px;font-weight:700;}
+.dd-badge-dim{background:#EEF2FF;color:#4F46E5;}
+.dd-badge-val{background:#ECFDF5;color:#059669;}
+.dd-badge-flt{background:#FEF3C7;color:#D97706;}
+.dd-board{background:white;border-radius:var(--radius);border:1px solid var(--border);padding:20px;box-shadow:var(--shadow);}
+.dd-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.dd-chart-types{display:flex;gap:4px;background:#F1F5F9;padding:4px;border-radius:8px;}
+.dd-type-btn{padding:6px 12px;border:none;border-radius:6px;background:transparent;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text-muted);transition:var(--t);}
+.dd-type-btn.active{background:white;color:var(--primary);box-shadow:var(--shadow);}
+.dd-drop-zones{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;}
+.dd-zone{background:#F8FAFC;border:2px dashed var(--border);border-radius:10px;padding:12px;min-height:84px;transition:var(--t);}
+.dd-zone.drag-over{border-color:var(--primary);background:#EEF2FF;}
+.dd-zone.has-items{border-style:solid;border-color:#CBD5E1;background:white;}
+.dd-zone-title{font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.dd-zone-items{display:flex;flex-wrap:wrap;gap:6px;}
+.dd-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#EEF2FF;color:var(--primary);border:1px solid #C7D2FE;border-radius:6px;font-size:0.78rem;font-weight:600;}
+.dd-chip.val{background:#ECFDF5;color:#059669;border-color:#A7F3D0;}
+.dd-chip.flt{background:#FEF3C7;color:#D97706;border-color:#FDE68A;}
+.dd-chip button{background:none;border:none;cursor:pointer;color:inherit;font-size:0.85rem;padding:0 2px;line-height:1;}
+.dd-zone-ph{font-size:0.75rem;color:var(--text-light);text-align:center;padding:12px 0;}
+.dd-chart-output{border:1px solid var(--border);border-radius:10px;padding:20px;background:#FAFBFF;min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+/* ========== Toast ========== */
+.toast{position:fixed;bottom:24px;right:24px;background:#1E293B;color:white;padding:14px 20px;border-radius:var(--radius-sm);font-size:.88rem;font-weight:600;box-shadow:var(--shadow-lg);z-index:9999;display:flex;align-items:center;gap:8px;animation:toastIn .3s ease;max-width:320px;}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+/* ========== Modal ========== */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.hidden{display:none;}
+.modal{background:white;border-radius:20px;max-width:480px;width:100%;box-shadow:var(--shadow-lg);overflow:hidden;}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-size:1rem;font-weight:700;}
+.modal-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text-muted);padding:4px;}
+.modal-body{padding:24px;}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;}
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--text-light);}
+@media(max-width:768px){.dash-stats{grid-template-columns:1fr 1fr;}.hr-overview-grid{grid-template-columns:1fr 1fr;}.survey-layout{grid-template-columns:1fr;}.hr-layout{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<!-- ==================== LOGIN ==================== -->
+<div id="screen-login" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="logo-icon">🔄</span>
+      <h1>مراسلاتي 360°</h1>
+      <p>نظام التقييم المتبادل الشامل للموظفين</p>
+    </div>
+    <div class="login-hint">
+      <strong>💡 حسابات سريعة لتجربة المنظومة (انقر لتعبئة الحساب):</strong>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+        <button type="button" class="btn btn-sm btn-outline" style="font-size:0.75rem;padding:3px 8px;" onclick="fillLogin('mahmoud.hashim@samaagroup.net', 'mahmoud123')">👑 محمود هاشم (مالك CRM - Admin)</button>
+        <button type="button" class="btn btn-sm btn-outline" style="font-size:0.75rem;padding:3px 8px;" onclick="fillLogin('a.taha@samaagroup.net', 'taha123')">👨‍💼 احمد طه (مدير CRM - Sales)</button>
+        <button type="button" class="btn btn-sm btn-outline" style="font-size:0.75rem;padding:3px 8px;" onclick="fillLogin('hazem.khaled@samaagroup.net', 'hazem123')">🔧 حازم خالد (مالك CRM - TS)</button>
+        <button type="button" class="btn btn-sm btn-outline" style="font-size:0.75rem;padding:3px 8px;" onclick="fillLogin('salma.essam@samaagroup.net', 'salma123')">👩‍💼 سلمى عصام (وكيل CRM - TS)</button>
+        <button type="button" class="btn btn-sm btn-outline" style="font-size:0.75rem;padding:3px 8px;" onclick="fillLogin('hr.admin@samaagroup.net', 'hradmin2024')">📊 مدير الموارد البشرية (HR)</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>البريد الإلكتروني الوظيفي</label>
+      <input type="email" id="login-email" placeholder="yourname@samaagroup.net" autocomplete="email">
+      <div class="form-error" id="err-email"></div>
+    </div>
+    <div class="form-group">
+      <label>كلمة المرور</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+      <div class="form-error" id="err-pass"></div>
+    </div>
+    <button class="btn btn-primary btn-lg" style="width:100%;" onclick="doLogin()">تسجيل الدخول ←</button>
+  </div>
+</div>
+
+<!-- ==================== EMPLOYEE DASHBOARD ==================== -->
+<div id="screen-dashboard" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand"><span class="brand-icon">🔄</span>مراسلاتي 360°</div>
+    <div class="topbar-right">
+      <span style="font-size:.8rem;opacity:.8;">دورة Q4 · 2024</span>
+      <div class="topbar-user">
+        <div class="topbar-avatar" id="topbar-avatar">م</div>
+        <span id="topbar-name"></span>
+      </div>
+      <button class="topbar-btn" onclick="doLogout()">خروج</button>
+    </div>
+  </div>
+  <div class="dash-header">
+    <div class="dash-welcome" id="dash-welcome"></div>
+    <div class="dash-sub">قيّم زملاءك بموضوعية — التقييمات سرية ومحمية</div>
+  </div>
+  <div class="dash-progress-bar"><div class="dash-progress-fill" id="dash-progress-fill"></div></div>
+  <div class="dash-progress-label" id="dash-progress-label"></div>
+  <div class="dash-stats">
+    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value" id="st-total"></div><div class="stat-label">موظف للتقييم</div></div>
+    <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="st-done"></div><div class="stat-label">تقييم مكتمل</div></div>
+    <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-value" id="st-progress"></div><div class="stat-label">قيد التنفيذ</div></div>
+    <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-value" id="st-remaining"></div><div class="stat-label">لم يبدأ بعد</div></div>
+  </div>
+  <div class="colleagues-section">
+    <div class="section-header">
+      <div class="section-title">زملاؤك المطلوب تقييمهم</div>
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="filterColleagues('all',this)">الكل</button>
+        <button class="filter-tab" onclick="filterColleagues('not_started',this)">لم يبدأ</button>
+        <button class="filter-tab" onclick="filterColleagues('in_progress',this)">جارٍ</button>
+        <button class="filter-tab" onclick="filterColleagues('completed',this)">مكتمل</button>
+      </div>
+    </div>
+    <div class="colleagues-grid" id="colleagues-grid"></div>
+  </div>
+</div>
+
+<!-- ==================== SURVEY ==================== -->
+<div id="screen-survey" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand"><span class="brand-icon">📝</span>تقييم <span id="survey-topbar-name" style="color:#A5B4FC;margin-right:6px;"></span></div>
+    <div class="topbar-right">
+      <div style="display:flex;align-items:center;background:rgba(255,255,255,0.18);padding:3px;border-radius:8px;gap:4px;">
+        <button id="btn-mode-quick" class="topbar-btn" style="padding:4px 10px;font-size:0.75rem;" onclick="setSurveyMode('quick')">⚡ تقييم سريع (10 محاور)</button>
+        <button id="btn-mode-detailed" class="topbar-btn" style="padding:4px 10px;font-size:0.75rem;background:white;color:var(--primary);" onclick="setSurveyMode('detailed')">📝 تفصيلي (150 سؤالاً)</button>
+      </div>
+      <span id="survey-save-status" style="font-size:.78rem;opacity:.7;"></span>
+      <button class="topbar-btn" onclick="goToDashboard()">← رجوع للقائمة</button>
+    </div>
+  </div>
+  <div class="survey-layout">
+    <div class="survey-sidebar">
+      <div class="survey-evaluatee">
+        <div class="evaluatee-avatar" id="survey-avatar"></div>
+        <div class="evaluatee-name" id="survey-name"></div>
+        <div class="evaluatee-role" id="survey-role"></div>
+      </div>
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label" id="sidebar-progress-label"></div>
+      </div>
+      <div class="sidebar-modules" id="sidebar-modules"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;">
+      <div class="survey-main" id="survey-main"></div>
+      <div class="survey-nav">
+        <div class="survey-nav-info" id="survey-nav-info"></div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost btn-sm" id="btn-prev-module" onclick="prevModule()">← السابق</button>
+          <button class="btn btn-primary btn-sm" id="btn-next-module" onclick="nextModule()">التالي ←</button>
+          <button class="btn btn-secondary btn-sm hidden" id="btn-submit-survey" onclick="submitSurvey()">✅ إرسال التقييم</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== HR DASHBOARD ==================== -->
+<div id="screen-hr" class="screen">
+  <div class="topbar">
+    <div class="topbar-brand"><span class="brand-icon">📊</span>لوحة تحكم الموارد البشرية</div>
+    <div class="topbar-right">
+      <button class="topbar-btn" onclick="openAnalysis()">📊 محرك التحليل</button>
+      <button class="topbar-btn" onclick="doLogout()">خروج</button>
+    </div>
+  </div>
+  <div class="hr-layout">
+    <div class="hr-sidebar">
+      <div style="font-size:.72rem;font-weight:700;color:var(--text-light);padding:8px 12px;text-transform:uppercase;letter-spacing:.05em;">القائمة الرئيسية</div>
+      <div class="hr-nav-item active" onclick="hrNav('overview',this)"><span class="hr-nav-icon">🏠</span>نظرة عامة</div>
+      <div class="hr-nav-item" onclick="hrNav('completion',this)"><span class="hr-nav-icon">✅</span>متابعة الإكمال</div>
+      <div class="hr-nav-item" onclick="hrNav('employees',this)"><span class="hr-nav-icon">👥</span>تقارير الموظفين</div>
+      <div class="hr-nav-item" onclick="hrNav('teams',this)"><span class="hr-nav-icon">🏢</span>تقارير الفرق</div>
+      <div class="hr-nav-item" onclick="hrNav('modules',this)"><span class="hr-nav-icon">📋</span>تحليل الوحدات</div>
+      <div class="hr-nav-item" onclick="hrNav('managers',this)"><span class="hr-nav-icon">👔</span>تقييم المديرين</div>
+      <div class="hr-nav-item" onclick="hrNav('dragdrop',this)"><span class="hr-nav-icon">🎯</span>مختبر التحليل (Drag & Drop)</div>
+    </div>
+    <div class="hr-main" id="hr-main">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title"></span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<script src="data/employees.js"></script>
+<script src="data/modules.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

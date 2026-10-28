@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>محرك التحليل التفاعلي - مراسلاتي 360</title>
+<style>
+/* ===== CSS Variables ===== */
+:root {
+  --primary: #4F46E5;
+  --primary-light: #818CF8;
+  --primary-dark: #3730A3;
+  --secondary: #059669;
+  --warning: #D97706;
+  --danger: #DC2626;
+  --success: #16A34A;
+  --bg: #F8FAFC;
+  --card: #FFFFFF;
+  --border: #E2E8F0;
+  --text: #1E293B;
+  --text-muted: #64748B;
+  --text-light: #94A3B8;
+  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --transition: all 0.2s ease;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  direction: rtl;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ===== Header ===== */
+.header {
+  background: var(--primary);
+  color: white;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+}
+.header-title { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.header-logo { font-size: 1.5rem; }
+.header-actions { display: flex; gap: 12px; align-items: center; }
+.btn {
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: var(--transition);
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-white { background: white; color: var(--primary); }
+.btn-white:hover { background: #EEF2FF; }
+.btn-outline { background: transparent; color: white; border: 2px solid rgba(255,255,255,0.5); }
+.btn-outline:hover { background: rgba(255,255,255,0.1); }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-success { background: var(--success); color: white; }
+.btn-danger-sm { background: #FEE2E2; color: var(--danger); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; }
+
+/* ===== Main Layout ===== */
+.app-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr 340px;
+  height: calc(100vh - 56px);
+  overflow: hidden;
+}
+
+/* ===== Left Panel - Metrics Library ===== */
+.metrics-panel {
+  background: var(--card);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #F0F4FF, #FAFBFF);
+}
+.panel-header h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.panel-header p { font-size: 0.78rem; color: var(--text-muted); }
+.metrics-search {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.metrics-search input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  direction: rtl;
+  background: var(--bg);
+  outline: none;
+  transition: var(--transition);
+}
+.metrics-search input:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+.metrics-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.metrics-category { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 8px 0 4px; }
+.metric-item {
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  user-select: none;
+  position: relative;
+}
+.metric-item:hover {
+  border-color: var(--primary-light);
+  background: #F0F4FF;
+  box-shadow: var(--shadow);
+  transform: translateX(-2px);
+}
+.metric-item:active { cursor: grabbing; }
+.metric-item.dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+}
+.metric-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.metric-info { flex: 1; }
+.metric-name { font-weight: 600; color: var(--text); font-size: 0.85rem; }
+.metric-desc { font-size: 0.73rem; color: var(--text-muted); margin-top: 1px; }
+.metric-type-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 100px;
+  font-weight: 600;
+}
+.badge-dimension { background: #DBEAFE; color: #1D4ED8; }
+.badge-metric { background: #D1FAE5; color: #065F46; }
+.badge-filter { background: #FEF3C7; color: #92400E; }
+.drag-handle {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  cursor: grab;
+}
+
+/* ===== Center - Builder ===== */
+.builder-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+.builder-toolbar {
+  padding: 12px 20px;
+  background: white;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.toolbar-label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
+.chart-type-selector {
+  display: flex;
+  gap: 6px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+}
+.chart-type-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: var(--transition);
+  background: transparent;
+  color: var(--text-muted);
+}
+.chart-type-btn.active {
+  background: white;
+  color: var(--primary);
+  box-shadow: var(--shadow);
+}
+.builder-drop-zones {
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 12px;
+}
+.drop-zone {
+  background: white;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  min-height: 80px;
+  transition: var(--transition);
+  position: relative;
+}
+.drop-zone.drag-over {
+  border-color: var(--primary);
+  background: #F0F4FF;
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.15);
+}
+.drop-zone.has-items {
+  border-style: solid;
+  border-color: var(--primary-light);
+}
+.drop-zone-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.drop-zone-label .zone-icon {
+  font-size: 0.9rem;
+}
+.drop-zone-placeholder {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  text-align: center;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.drop-zone-placeholder .arrow { font-size: 1.2rem; }
+.dropped-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dropped-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--primary);
+  color: white;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  animation: chipIn 0.2s ease;
+}
+.dropped-chip.filter-chip { background: #D97706; }
+.dropped-chip.group-chip { background: var(--secondary); }
+@keyframes chipIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+.dropped-chip button {
+  background: rgba(255,255,255,0.25);
+  border: none;
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  line-height: 1;
+  transition: var(--transition);
+}
+.dropped-chip button:hover { background: rgba(255,255,255,0.4); }
+
+.builder-actions {
+  padding: 12px 20px;
+  background: white;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ===== Chart Area ===== */
+.chart-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+.chart-container {
+  background: white;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 20px;
+  min-height: 300px;
+  box-shadow: var(--shadow);
+}
+.chart-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.chart-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+.chart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 250px;
+  gap: 12px;
+  color: var(--text-light);
+}
+.chart-empty-icon { font-size: 3rem; }
+.chart-empty h4 { font-size: 1rem; color: var(--text-muted); }
+.chart-empty p { font-size: 0.85rem; text-align: center; max-width: 300px; }
+
+/* ===== Bar Chart ===== */
+.bar-chart { display: flex; flex-direction: column; gap: 12px; }
+.bar-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 60px;
+  align-items: center;
+  gap: 12px;
+  animation: slideIn 0.3s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.bar-label { font-size: 0.85rem; font-weight: 600; color: var(--text); text-align: right; }
+.bar-track { background: #F1F5F9; border-radius: 100px; height: 22px; overflow: hidden; position: relative; }
+.bar-fill {
+  height: 100%;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: white;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  min-width: 30px;
+}
+.bar-value { font-size: 0.9rem; font-weight: 700; color: var(--text); text-align: center; }
+.bar-count { font-size: 0.72rem; color: var(--text-muted); text-align: center; }
+
+/* ===== Radar Chart ===== */
+.radar-wrapper { display: flex; justify-content: center; align-items: center; padding: 10px 0; }
+svg.radar-svg { overflow: visible; }
+
+/* ===== Heatmap ===== */
+.heatmap-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.heatmap-table th { padding: 8px 12px; text-align: center; font-weight: 700; color: var(--text-muted); font-size: 0.75rem; border-bottom: 2px solid var(--border); }
+.heatmap-table td { padding: 8px 12px; text-align: center; border: 1px solid var(--border); font-weight: 600; cursor: pointer; transition: transform 0.15s; }
+.heatmap-table td:hover { transform: scale(1.05); z-index: 1; position: relative; }
+.heatmap-table tr:first-child td { text-align: right; font-weight: 700; }
+
+/* ===== Comparison Table ===== */
+.comparison-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.comparison-table th {
+  padding: 10px 14px;
+  background: var(--bg);
+  text-align: right;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+.comparison-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.comparison-table tr:hover td { background: #F8FAFF; }
+.score-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* ===== Right Panel - Results ===== */
+.results-panel {
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.results-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #F0FDF4, #FAFBFF);
+}
+.results-header h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.results-header p { font-size: 0.78rem; color: var(--text-muted); }
+.results-list { flex: 1; overflow-y: auto; padding: 12px; }
+.result-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 10px;
+  transition: var(--transition);
+  cursor: pointer;
+}
+.result-card:hover { border-color: var(--primary-light); background: #F8FAFF; }
+.result-card.selected { border-color: var(--primary); background: #F0F4FF; }
+.result-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.result-name { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+.result-team { font-size: 0.73rem; color: var(--text-muted); }
+.result-score {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+.result-modules { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.module-dot {
+  width: 28px;
+  height: 18px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  title: attr(data-module);
+}
+.results-footer {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+.results-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-mini {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.stat-mini-value { font-size: 1.2rem; font-weight: 800; color: var(--primary); }
+.stat-mini-label { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+
+/* ===== Tooltips ===== */
+.tooltip {
+  position: fixed;
+  background: rgba(15,23,42,0.9);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  pointer-events: none;
+  z-index: 9999;
+  max-width: 200px;
+  backdrop-filter: blur(4px);
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-light); }
+
+/* ===== Ghost Drag Element ===== */
+.drag-ghost {
+  position: fixed;
+  background: var(--primary);
+  color: white;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 9998;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transform: rotate(2deg);
+  opacity: 0.95;
+}
+
+/* ===== Insight Cards ===== */
+.insights-section { margin-top: 16px; }
+.insight-card {
+  background: white;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+}
+.insight-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.insight-icon { font-size: 1.2rem; }
+.insight-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+.insight-body { font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; }
+.insight-highlight { color: var(--primary); font-weight: 700; }
+
+/* ===== Score Colors ===== */
+.score-1 { background-color: #FEE2E2; color: #991B1B; }
+.score-2 { background-color: #FEF3C7; color: #92400E; }
+.score-3 { background-color: #DBEAFE; color: #1E40AF; }
+.score-4 { background-color: #D1FAE5; color: #065F46; }
+.score-5 { background-color: #EDE9FE; color: #4C1D95; }
+
+/* ===== Loading ===== */
+.loading-dots { display: inline-flex; gap: 4px; }
+.loading-dots span {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--primary);
+  animation: bounce 1.4s ease infinite;
+}
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* ===== Print ===== */
+@media print {
+  .header, .metrics-panel, .results-panel, .builder-drop-zones, .builder-toolbar, .builder-actions { display: none !important; }
+  .app-layout { grid-template-columns: 1fr; }
+  .chart-area { overflow: visible; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-title">
+    <span class="header-logo">📊</span>
+    محرك التحليل التفاعلي — مراسلاتي 360°
+  </div>
+  <div class="header-actions">
+    <span id="cycle-label" style="font-size:0.85rem;opacity:0.8;">دورة Q4 - 2024</span>
+    <button class="btn btn-outline" onclick="resetBuilder()">🔄 إعادة ضبط</button>
+    <button class="btn btn-white" onclick="generateInsights()">💡 تحليل تلقائي</button>
+    <button class="btn btn-white" onclick="window.print()">🖨️ طباعة</button>
+    <button class="btn btn-outline" onclick="if(window.opener){window.close();}else{window.location.href='index.html';}">← رجوع للرئيسية</button>
+  </div>
+</div>
+
+<!-- App Layout -->
+<div class="app-layout">
+
+  <!-- Left: Metrics Library -->
+  <div class="metrics-panel">
+    <div class="panel-header">
+      <h3>📦 مكتبة المقاييس</h3>
+      <p>اسحب أي عنصر إلى منطقة التحليل</p>
+    </div>
+    <div class="metrics-search">
+      <input type="text" id="metrics-search" placeholder="🔍 ابحث في المقاييس..." oninput="filterMetrics(this.value)">
+    </div>
+    <div class="metrics-list" id="metrics-list">
+      <!-- Generated by JS -->
+    </div>
+  </div>
+
+  <!-- Center: Builder + Chart -->
+  <div class="builder-panel">
+    <!-- Toolbar -->
+    <div class="builder-toolbar">
+      <span class="toolbar-label">نوع الرسم:</span>
+      <div class="chart-type-selector">
+        <button class="chart-type-btn active" onclick="setChartType('bar', this)">📊 أعمدة</button>
+        <button class="chart-type-btn" onclick="setChartType('radar', this)">🕸️ رادار</button>
+        <button class="chart-type-btn" onclick="setChartType('heatmap', this)">🌡️ خريطة حرارية</button>
+        <button class="chart-type-btn" onclick="setChartType('table', this)">📋 جدول</button>
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn btn-primary" style="padding:7px 16px;font-size:0.83rem;" onclick="runAnalysis()">
+        ▶ تشغيل التحليل
+      </button>
+    </div>
+
+    <!-- Drop Zones -->
+    <div class="builder-drop-zones">
+      <!-- Zone 1: Dimension / X Axis -->
+      <div class="drop-zone" id="zone-dimension"
+           ondragover="onDragOver(event, 'zone-dimension')"
+           ondragleave="onDragLeave(event, 'zone-dimension')"
+           ondrop="onDrop(event, 'zone-dimension')">
+        <div class="drop-zone-label">
+          <span class="zone-icon">📐</span>
+          المحور الرئيسي (الأبعاد)
+        </div>
+        <div class="dropped-items" id="zone-dimension-items"></div>
+        <div class="drop-zone-placeholder" id="zone-dimension-ph">
+          <span class="arrow">↑</span>
+          <span>اسحب: موظف، فريق، أو وحدة</span>
+        </div>
+      </div>
+
+      <!-- Zone 2: Values / Y Axis -->
+      <div class="drop-zone" id="zone-values"
+           ondragover="onDragOver(event, 'zone-values')"
+           ondragleave="onDragLeave(event, 'zone-values')"
+           ondrop="onDrop(event, 'zone-values')">
+        <div class="drop-zone-label">
+          <span class="zone-icon">📏</span>
+          القيم المقاسة
+        </div>
+        <div class="dropped-items" id="zone-values-items"></div>
+        <div class="drop-zone-placeholder" id="zone-values-ph">
+          <span class="arrow">↑</span>
+          <span>اسحب: مقياس أداء أو وحدة تقييم</span>
+        </div>
+      </div>
+
+      <!-- Zone 3: Group By -->
+      <div class="drop-zone" id="zone-group"
+           ondragover="onDragOver(event, 'zone-group')"
+           ondragleave="onDragLeave(event, 'zone-group')"
+           ondrop="onDrop(event, 'zone-group')">
+        <div class="drop-zone-label">
+          <span class="zone-icon">🗂️</span>
+          التجميع (اختياري)
+        </div>
+        <div class="dropped-items" id="zone-group-items"></div>
+        <div class="drop-zone-placeholder" id="zone-group-ph">
+          <span class="arrow">↑</span>
+          <span>اسحب: للتجميع بحسب فريق أو دور</span>
+        </div>
+      </div>
+
+      <!-- Zone 4: Filters -->
+      <div class="drop-zone" id="zone-filter"
+           ondragover="onDragOver(event, 'zone-filter')"
+           ondragleave="onDragLeave(event, 'zone-filter')"
+           ondrop="onDrop(event, 'zone-filter')">
+        <div class="drop-zone-label">
+          <span class="zone-icon">🔽</span>
+          الفلاتر (اختياري)
+        </div>
+        <div class="dropped-items" id="zone-filter-items"></div>
+        <div class="drop-zone-placeholder" id="zone-filter-ph">
+          <span class="arrow">↑</span>
+          <span>اسحب: للتصفية حسب فريق أو مستوى</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart Area -->
+    <div class="chart-area">
+      <div class="chart-container" id="chart-container">
+        <div class="chart-empty" id="chart-empty">
+          <div class="chart-empty-icon">📊</div>
+          <h4>ابنِ تحليلك الخاص</h4>
+          <p>اسحب المقاييس من اليسار إلى مناطق التحليل، ثم اضغط "تشغيل التحليل"</p>
+        </div>
+        <div id="chart-output" style="display:none;"></div>
+      </div>
+
+      <!-- Insights Section -->
+      <div class="insights-section" id="insights-section" style="display:none;"></div>
+    </div>
+
+    <!-- Builder Actions -->
+    <div class="builder-actions">
+      <button class="btn btn-danger-sm" onclick="clearAllZones()">🗑️ مسح الكل</button>
+      <button class="btn btn-outline btn-primary" onclick="saveConfiguration()">💾 حفظ الإعداد</button>
+      <button class="btn btn-success" onclick="exportChart()">📤 تصدير</button>
+    </div>
+  </div>
+
+  <!-- Right: Results Panel -->
+  <div class="results-panel">
+    <div class="results-header">
+      <h3>📋 ملخص النتائج</h3>
+      <p>انقر على موظف لتفصيل درجاته</p>
+    </div>
+    <div class="results-list" id="results-list">
+      <!-- Generated by JS -->
+    </div>
+    <div class="results-footer">
+      <div class="results-stats" id="results-stats">
+        <div class="stat-mini">
+          <div class="stat-mini-value" id="stat-avg">—</div>
+          <div class="stat-mini-label">متوسط عام</div>
+        </div>
+        <div class="stat-mini">
+          <div class="stat-mini-value" id="stat-complete">—</div>
+          <div class="stat-mini-label">تقييمات مكتملة</div>
+        </div>
+        <div class="stat-mini">
+          <div class="stat-mini-value" id="stat-top">—</div>
+          <div class="stat-mini-label">أعلى موظف</div>
+        </div>
+        <div class="stat-mini">
+          <div class="stat-mini-value" id="stat-lowest">—</div>
+          <div class="stat-mini-label">أدنى متوسط</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drag Ghost -->
+<div class="drag-ghost" id="drag-ghost" style="display:none;"></div>
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip" style="display:none;"></div>
+
+<script src="data/employees.js"></script>
+<script>
+// ==========================================
+// DATA - Synced from data/employees.js
+// ==========================================
+
+
+const MODULES_META = [
+  { id: 1, title: "الالتزام والانضباط", icon: "⏰", color: "#4F46E5" },
+  { id: 2, title: "جودة العمل",         icon: "⭐", color: "#059669" },
+  { id: 3, title: "التعاون الجماعي",    icon: "🤝", color: "#D97706" },
+  { id: 4, title: "التواصل المهني",     icon: "💬", color: "#7C3AED" },
+  { id: 5, title: "الكفاءة الفنية",     icon: "⚙️", color: "#0891B2" },
+  { id: 6, title: "حل المشكلات",        icon: "🔧", color: "#DC2626" },
+  { id: 7, title: "المبادرة والتطوير",  icon: "🚀", color: "#EA580C" },
+  { id: 8, title: "السلوك المهني",      icon: "🎯", color: "#7C3AED" },
+  { id: 9, title: "التأثير والإنتاج",   icon: "📈", color: "#0D9488" },
+  { id: 10, title: "التقييم العام",     icon: "💡", color: "#DB2777" },
+];
+
+const TEAMS = [...new Set(EMPLOYEES.map(e => e.team))];
+
+// ==========================================
+// STATE
+// ==========================================
+let state = {
+  chartType: 'bar',
+  zones: {
+    dimension: [],
+    values: [],
+    group: [],
+    filter: [],
+  },
+  dragging: null,
+  selectedEmployee: null,
+  analysisData: null,
+};
+
+// Load demo data from main app OR generate
+let EVAL_DATA = {};
+function loadData() {
+  try {
+    const stored = localStorage.getItem('morasalaty_360_data');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      EVAL_DATA = parsed.evaluations || {};
+    }
+  } catch(e) {}
+  // If no data, generate demo
+  if (Object.keys(EVAL_DATA).length === 0) {
+    generateDemoData();
+  }
+  updateResultsPanel();
+  updateStats();
+}
+
+function generateDemoData() {
+  const weights = [0.05, 0.1, 0.15, 0.25, 0.25, 0.15, 0.05];
+  function randScore() {
+    const r = Math.random();
+    let cum = 0;
+    for (let i = 0; i < weights.length; i++) {
+      cum += weights[i];
+      if (r < cum) return i + 1 > 5 ? 5 : i + 1;
+    }
+    return 3;
+  }
+  EMPLOYEES.forEach(evaluator => {
+    EMPLOYEES.forEach(evaluatee => {
+      if (evaluator.id === evaluatee.id) return;
+      const key = `${evaluator.id}_${evaluatee.id}`;
+      const isComplete = Math.random() < 0.72;
+      if (!isComplete) return;
+      const moduleAnswers = {};
+      for (let m = 1; m <= 10; m++) {
+        moduleAnswers[`m${m}`] = {};
+        for (let q = 1; q <= 15; q++) {
+          const skip = Math.random() < 0.08;
+          moduleAnswers[`m${m}`][`m${m}q${q}`] = skip ? 'N/A' : randScore();
+        }
+      }
+      EVAL_DATA[key] = {
+        evaluatorId: evaluator.id,
+        evaluateeId: evaluatee.id,
+        cycleId: '2024-Q4',
+        status: 'completed',
+        completedAt: new Date(Date.now() - Math.random() * 7 * 24 * 3600000).toISOString(),
+        moduleAnswers,
+      };
+    });
+  });
+}
+
+// ==========================================
+// METRICS DEFINITION
+// ==========================================
+function buildMetrics() {
+  const metrics = [];
+
+  // DIMENSIONS
+  metrics.push({ id: 'all_employees', type: 'dimension', category: 'أبعاد الموظفين', name: 'كل الموظفين', desc: 'عرض جميع الموظفين', icon: '👥', color: '#4F46E5' });
+  EMPLOYEES.forEach(e => {
+    metrics.push({ id: `emp_${e.id}`, type: 'dimension', category: 'موظفون', name: e.name, desc: e.role, icon: '👤', color: '#6366F1', data: { empId: e.id } });
+  });
+  TEAMS.forEach(t => {
+    metrics.push({ id: `team_${t}`, type: 'dimension', category: 'فرق العمل', name: `فريق ${t}`, desc: `أعضاء فريق ${t}`, icon: '🏢', color: '#0891B2', data: { team: t } });
+  });
+
+  // VALUES / METRICS
+  metrics.push({ id: 'overall_score', type: 'metric', category: 'مقاييس الأداء', name: 'المتوسط العام', desc: 'متوسط جميع الوحدات', icon: '⭐', color: '#059669' });
+  MODULES_META.forEach(m => {
+    metrics.push({ id: `module_${m.id}`, type: 'metric', category: 'وحدات التقييم', name: m.title, desc: `وحدة ${m.id} - ${m.title}`, icon: m.icon, color: m.color, data: { moduleId: m.id } });
+  });
+
+  // FILTERS
+  metrics.push({ id: 'filter_score_high', type: 'filter', category: 'فلاتر', name: 'أداء عالٍ (4-5)', desc: 'موظفون بمتوسط ≥ 4', icon: '🟢', color: '#059669' });
+  metrics.push({ id: 'filter_score_mid',  type: 'filter', category: 'فلاتر', name: 'أداء متوسط (3-4)', desc: 'موظفون بمتوسط 3-4',  icon: '🟡', color: '#D97706' });
+  metrics.push({ id: 'filter_score_low',  type: 'filter', category: 'فلاتر', name: 'يحتاج تحسين (<3)', desc: 'موظفون بمتوسط < 3',  icon: '🔴', color: '#DC2626' });
+  metrics.push({ id: 'filter_managers',   type: 'filter', category: 'فلاتر', name: 'المديرون فقط',    desc: 'تصفية المديرين',       icon: '👔', color: '#7C3AED' });
+  TEAMS.forEach(t => {
+    metrics.push({ id: `filter_team_${t}`, type: 'filter', category: 'فلاتر حسب الفريق', name: `فريق ${t}`, desc: `فلترة: ${t}`, icon: '🏷️', color: '#0891B2', data: { team: t } });
+  });
+
+  return metrics;
+}
+
+// ==========================================
+// CALCULATIONS
+// ==========================================
+function getEmployeeModuleScore(employeeId, moduleId) {
+  const answers = [];
+  Object.values(EVAL_DATA).forEach(ev => {
+    if (ev.evaluateeId !== employeeId || ev.status !== 'completed') return;
+    const mKey = `m${moduleId}`;
+    const moduleData = ev.moduleAnswers?.[mKey];
+    if (!moduleData) return;
+    Object.values(moduleData).forEach(v => {
+      if (v !== 'N/A' && typeof v === 'number') answers.push(v);
+    });
+  });
+  if (answers.length === 0) return null;
+  return { avg: answers.reduce((a, b) => a + b, 0) / answers.length, count: answers.length };
+}
+
+function getEmployeeOverallScore(employeeId) {
+  const moduleScores = [];
+  for (let m = 1; m <= 10; m++) {
+    const s = getEmployeeModuleScore(employeeId, m);
+    if (s) moduleScores.push(s.avg);
+  }
+  if (moduleScores.length === 0) return null;
+  return { avg: moduleScores.reduce((a, b) => a + b, 0) / moduleScores.length, count: moduleScores.length };
+}
+
+function getTeamScore(team, moduleId = null) {
+  const teamEmployees = EMPLOYEES.filter(e => e.team === team);
+  const scores = [];
+  teamEmployees.forEach(emp => {
+    const s = moduleId ? getEmployeeModuleScore(emp.id, moduleId) : getEmployeeOverallScore(emp.id);
+    if (s) scores.push(s.avg);
+  });
+  if (scores.length === 0) return null;
+  return { avg: scores.reduce((a, b) => a + b, 0) / scores.length, count: scores.length };
+}
+
+function getCompletionCount(employeeId) {
+  return Object.values(EVAL_DATA).filter(ev =>
+    ev.evaluateeId === employeeId && ev.status === 'completed'
+  ).length;
+}
+
+// ==========================================
+// DRAG AND DROP
+// ==========================================
+let allMetrics = [];
+let dragData = null;
+let ghostEl = null;
+
+function buildMetricsList() {
+  allMetrics = buildMetrics();
+  renderMetricsList(allMetrics);
+}
+
+function renderMetricsList(items) {
+  const container = document.getElementById('metrics-list');
+  let html = '';
+  let lastCategory = '';
+  items.forEach(m => {
+    if (m.category !== lastCategory) {
+      html += `<div class="metrics-category">${m.category}</div>`;
+      lastCategory = m.category;
+    }
+    const badge = m.type === 'dimension' ? 'badge-dimension بُعد' :
+                  m.type === 'metric' ? 'badge-metric مقياس' : 'badge-filter فلتر';
+    const badgeParts = badge.split(' ');
+    html += `
+      <div class="metric-item"
+           draggable="true"
+           data-id="${m.id}"
+           ondragstart="startDrag(event, '${m.id}')"
+           ondragend="endDrag(event)"
+           onclick="quickAddMetric('${m.id}')"
+           title="${m.desc} (انقر للإضافة السريعة أو اسحب)">
+        <div class="metric-icon" style="background:${m.color}22;color:${m.color};">${m.icon}</div>
+        <div class="metric-info">
+          <div class="metric-name">${m.name}</div>
+          <div class="metric-desc">${m.desc}</div>
+        </div>
+        <span class="metric-type-badge ${badgeParts[0]}">${badgeParts[1]}</span>
+        <span class="drag-handle">⣿</span>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function filterMetrics(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) return renderMetricsList(allMetrics);
+  const filtered = allMetrics.filter(m =>
+    m.name.includes(q) || m.desc.includes(q) || m.category.includes(q)
+  );
+  renderMetricsList(filtered);
+}
+
+function quickAddMetric(metricId) {
+  const m = allMetrics.find(x => x.id === metricId);
+  if (!m) return;
+  const targetZone = m.type === 'dimension' ? 'dimension' : (m.type === 'metric' ? 'values' : 'filter');
+  const zone = state.zones[targetZone];
+  if (!zone.find(z => z.id === m.id)) {
+    zone.push({ ...m });
+    renderZone(targetZone);
+    updateResultsPanel();
+    updateStats();
+    runAnalysis();
+  }
+}
+
+function startDrag(event, metricId) {
+  dragData = allMetrics.find(m => m.id === metricId);
+  if (!dragData) return;
+  event.dataTransfer.effectAllowed = 'copy';
+  event.dataTransfer.setData('text/plain', metricId);
+
+  // Show ghost
+  const ghost = document.getElementById('drag-ghost');
+  ghost.textContent = `${dragData.icon} ${dragData.name}`;
+  ghost.style.display = 'flex';
+
+  // Hide default ghost
+  const empty = document.createElement('div');
+  empty.style.cssText = 'width:1px;height:1px;position:fixed;top:-999px';
+  document.body.appendChild(empty);
+  event.dataTransfer.setDragImage(empty, 0, 0);
+  setTimeout(() => document.body.removeChild(empty), 0);
+
+  document.addEventListener('dragover', moveDragGhost);
+  event.currentTarget.classList.add('dragging');
+}
+
+function moveDragGhost(e) {
+  const ghost = document.getElementById('drag-ghost');
+  ghost.style.left = (e.clientX + 14) + 'px';
+  ghost.style.top = (e.clientY - 20) + 'px';
+}
+
+function endDrag(event) {
+  document.getElementById('drag-ghost').style.display = 'none';
+  document.removeEventListener('dragover', moveDragGhost);
+  event.currentTarget.classList.remove('dragging');
+  dragData = null;
+}
+
+function onDragOver(event, zoneId) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'copy';
+  document.getElementById(zoneId).classList.add('drag-over');
+}
+
+function onDragLeave(event, zoneId) {
+  document.getElementById(zoneId).classList.remove('drag-over');
+}
+
+function onDrop(event, zoneId) {
+  event.preventDefault();
+  document.getElementById(zoneId).classList.remove('drag-over');
+  if (!dragData) return;
+
+  const zoneKey = zoneId.replace('zone-', '');
+  const zone = state.zones[zoneKey];
+
+  // Validate: dimensions go to dimension/group, metrics to values, filters to filter
+  const validations = {
+    dimension: ['dimension'],
+    values: ['metric'],
+    group: ['dimension'],
+    filter: ['filter', 'dimension'],
+  };
+  if (!validations[zoneKey].includes(dragData.type)) {
+    showTooltip(event, `⚠️ هذا العنصر لا يُضاف هنا. يُضاف في منطقة أخرى.`);
+    setTimeout(hideTooltip, 2000);
+    return;
+  }
+
+  // Prevent duplicates
+  if (zone.find(z => z.id === dragData.id)) {
+    showTooltip(event, `✓ هذا العنصر موجود بالفعل`);
+    setTimeout(hideTooltip, 1500);
+    return;
+  }
+
+  // Max items per zone
+  const maxItems = { dimension: 8, values: 5, group: 2, filter: 4 };
+  if (zone.length >= maxItems[zoneKey]) {
+    showTooltip(event, `⚠️ الحد الأقصى ${maxItems[zoneKey]} عناصر في هذه المنطقة`);
+    setTimeout(hideTooltip, 2000);
+    return;
+  }
+
+  zone.push({ ...dragData });
+  renderZone(zoneKey);
+}
+
+function renderZone(zoneKey) {
+  const zone = state.zones[zoneKey];
+  const itemsEl = document.getElementById(`zone-${zoneKey}-items`);
+  const phEl = document.getElementById(`zone-${zoneKey}-ph`);
+  const zoneEl = document.getElementById(`zone-${zoneKey}`);
+
+  if (zone.length === 0) {
+    itemsEl.innerHTML = '';
+    phEl.style.display = 'flex';
+    zoneEl.classList.remove('has-items');
+    return;
+  }
+
+  phEl.style.display = 'none';
+  zoneEl.classList.add('has-items');
+
+  const chipClass = zoneKey === 'filter' ? 'filter-chip' : zoneKey === 'group' ? 'group-chip' : '';
+  itemsEl.innerHTML = zone.map((item, idx) => `
+    <div class="dropped-chip ${chipClass}">
+      ${item.icon} ${item.name}
+      <button onclick="removeFromZone('${zoneKey}', ${idx})" title="إزالة">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeFromZone(zoneKey, index) {
+  state.zones[zoneKey].splice(index, 1);
+  renderZone(zoneKey);
+}
+
+function clearAllZones() {
+  ['dimension', 'values', 'group', 'filter'].forEach(z => {
+    state.zones[z] = [];
+    renderZone(z);
+  });
+  document.getElementById('chart-empty').style.display = 'flex';
+  document.getElementById('chart-output').style.display = 'none';
+  document.getElementById('insights-section').style.display = 'none';
+}
+
+// ==========================================
+// ANALYSIS RUNNER
+// ==========================================
+function runAnalysis() {
+  const { dimension, values } = state.zones;
+
+  if (dimension.length === 0 || values.length === 0) {
+    alert('يرجى إضافة بُعد واحد على الأقل في "المحور الرئيسي" ومقياس واحد في "القيم المقاسة"');
+    return;
+  }
+
+  // Build analysis data
+  const analysisItems = resolveItems(dimension, state.zones.filter);
+  const metrics = values;
+
+  state.analysisData = { items: analysisItems, metrics };
+
+  // Render chart
+  document.getElementById('chart-empty').style.display = 'none';
+  document.getElementById('chart-output').style.display = 'block';
+
+  switch (state.chartType) {
+    case 'bar':    renderBarChart(analysisItems, metrics); break;
+    case 'radar':  renderRadarChart(analysisItems, metrics); break;
+    case 'heatmap': renderHeatmap(analysisItems, metrics); break;
+    case 'table':  renderTable(analysisItems, metrics); break;
+  }
+
+  generateInsights();
+}
+
+function resolveItems(dimensions, filters) {
+  let items = [];
+
+  dimensions.forEach(dim => {
+    if (dim.id === 'all_employees') {
+      EMPLOYEES.forEach(e => items.push({ id: `emp_${e.id}`, label: e.name, subLabel: e.role, type: 'employee', empId: e.id }));
+    } else if (dim.id.startsWith('emp_')) {
+      const emp = EMPLOYEES.find(e => e.id === dim.data?.empId);
+      if (emp) items.push({ id: dim.id, label: emp.name, subLabel: emp.role, type: 'employee', empId: emp.id });
+    } else if (dim.id.startsWith('team_')) {
+      const t = dim.data?.team;
+      items.push({ id: dim.id, label: `فريق ${t}`, subLabel: `${EMPLOYEES.filter(e => e.team === t).length} موظفين`, type: 'team', team: t });
+    }
+  });
+
+  // Remove duplicates
+  const seen = new Set();
+  items = items.filter(i => { if (seen.has(i.id)) return false; seen.add(i.id); return true; });
+
+  // Apply filters
+  filters.forEach(f => {
+    if (f.id === 'filter_managers') {
+      items = items.filter(i => {
+        if (i.type !== 'employee') return true;
+        const emp = EMPLOYEES.find(e => e.id === i.empId);
+        return emp?.isManager;
+      });
+    } else if (f.id === 'filter_score_high') {
+      items = items.filter(i => {
+        const s = getItemScore(i, 'overall_score');
+        return s && s.avg >= 4;
+      });
+    } else if (f.id === 'filter_score_mid') {
+      items = items.filter(i => {
+        const s = getItemScore(i, 'overall_score');
+        return s && s.avg >= 3 && s.avg < 4;
+      });
+    } else if (f.id === 'filter_score_low') {
+      items = items.filter(i => {
+        const s = getItemScore(i, 'overall_score');
+        return s && s.avg < 3;
+      });
+    } else if (f.id.startsWith('filter_team_')) {
+      const t = f.data?.team;
+      items = items.filter(i => {
+        if (i.type === 'team') return i.team === t;
+        const emp = EMPLOYEES.find(e => e.id === i.empId);
+        return emp?.team === t;
+      });
+    }
+  });
+
+  return items;
+}
+
+function getItemScore(item, metricId) {
+  if (item.type === 'employee') {
+    if (metricId === 'overall_score') return getEmployeeOverallScore(item.empId);
+    if (metricId.startsWith('module_')) {
+      const mId = parseInt(metricId.split('_')[1]);
+      return getEmployeeModuleScore(item.empId, mId);
+    }
+  } else if (item.type === 'team') {
+    if (metricId === 'overall_score') return getTeamScore(item.team);
+    if (metricId.startsWith('module_')) {
+      const mId = parseInt(metricId.split('_')[1]);
+      return getTeamScore(item.team, mId);
+    }
+  }
+  return null;
+}
+
+// ==========================================
+// CHART RENDERERS
+// ==========================================
+function scoreColor(avg) {
+  if (!avg) return '#94A3B8';
+  if (avg >= 4.5) return '#4F46E5';
+  if (avg >= 4)   return '#059669';
+  if (avg >= 3)   return '#0891B2';
+  if (avg >= 2)   return '#D97706';
+  return '#DC2626';
+}
+
+function renderBarChart(items, metrics) {
+  const output = document.getElementById('chart-output');
+  const metricMeta = metrics[0]; // Primary metric for bar chart
+
+  const data = items.map(item => {
+    const s = getItemScore(item, metricMeta.id);
+    return { ...item, score: s };
+  }).filter(d => d.score !== null).sort((a, b) => b.score.avg - a.score.avg);
+
+  if (data.length === 0) {
+    output.innerHTML = '<div class="chart-empty"><div class="chart-empty-icon">😶</div><h4>لا توجد بيانات كافية</h4><p>لم تُكتمل بعد تقييمات لهذه العناصر</p></div>';
+    return;
+  }
+
+  const maxScore = 5;
+  const metricName = metricMeta.name;
+
+  let html = `
+    <div class="chart-title">📊 ${metricName}</div>
+    <div class="chart-subtitle">مرتب من الأعلى إلى الأدنى • N: عدد الإجابات المحسوبة</div>
+    <div class="bar-chart">
+  `;
+
+  // Comparison: if multiple metrics
+  if (metrics.length > 1) {
+    html += renderMultiMetricBars(items, metrics);
+  } else {
+    data.forEach((d, idx) => {
+      const pct = (d.score.avg / maxScore * 100).toFixed(1);
+      const color = scoreColor(d.score.avg);
+      html += `
+        <div class="bar-row">
+          <div class="bar-label">${d.label}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${pct}%;background:${color};">
+              ${d.score.avg.toFixed(2)}
+            </div>
+          </div>
+          <div>
+            <div class="bar-value" style="color:${color}">${d.score.avg.toFixed(2)}</div>
+            <div class="bar-count">N=${d.score.count}</div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  html += '</div>';
+  output.innerHTML = html;
+}
+
+function renderMultiMetricBars(items, metrics) {
+  let html = '';
+  items.forEach(item => {
+    html += `
+      <div style="margin-bottom:20px;padding:14px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0;">
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:10px;">${item.label} <span style="font-weight:400;color:#64748B;font-size:0.78rem;">${item.subLabel}</span></div>
+    `;
+    metrics.forEach(m => {
+      const s = getItemScore(item, m.id);
+      if (!s) { html += `<div class="bar-row"><div class="bar-label">${m.name}</div><div style="color:#94A3B8;font-size:0.8rem;padding:5px;">لا توجد بيانات كافية</div></div>`; return; }
+      const pct = (s.avg / 5 * 100).toFixed(1);
+      const color = scoreColor(s.avg);
+      const mMeta = MODULES_META.find(mm => `module_${mm.id}` === m.id) || { icon: '📊' };
+      html += `
+        <div class="bar-row">
+          <div class="bar-label">${mMeta.icon} ${m.name}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${pct}%;background:${color};">${s.avg.toFixed(2)}</div>
+          </div>
+          <div><div class="bar-value" style="color:${color}">${s.avg.toFixed(2)}</div><div class="bar-count">N=${s.count}</div></div>
+        </div>
+      `;
+    });
+    html += '</div>';
+  });
+  return html;
+}
+
+function renderRadarChart(items, metrics) {
+  const output = document.getElementById('chart-output');
+  if (metrics.length === 0) return;
+
+  const size = 320;
+  const cx = size / 2, cy = size / 2, r = 110;
+  const n = metrics.length;
+  const colors = ['#4F46E5','#059669','#DC2626','#D97706','#7C3AED','#0891B2'];
+
+  function polarToXY(angle, radius) {
+    return { x: cx + radius * Math.sin(angle), y: cy - radius * Math.cos(angle) };
+  }
+
+  let svg = `<svg class="radar-svg" width="${size + 160}" height="${size + 60}" viewBox="-80 -30 ${size + 160} ${size + 60}">`;
+
+  // Grid circles
+  [0.2, 0.4, 0.6, 0.8, 1.0].forEach(f => {
+    const pts = metrics.map((_, i) => {
+      const pt = polarToXY(2 * Math.PI * i / n, r * f);
+      return `${pt.x},${pt.y}`;
+    }).join(' ');
+    svg += `<polygon points="${pts}" fill="none" stroke="#E2E8F0" stroke-width="1"/>`;
+    const gridPt = polarToXY(0, r * f);
+    svg += `<text x="${gridPt.x + 4}" y="${gridPt.y}" font-size="10" fill="#94A3B8">${f * 5}</text>`;
+  });
+
+  // Axes + labels
+  metrics.forEach((m, i) => {
+    const pt = polarToXY(2 * Math.PI * i / n, r);
+    svg += `<line x1="${cx}" y1="${cy}" x2="${pt.x}" y2="${pt.y}" stroke="#E2E8F0" stroke-width="1"/>`;
+    const labelPt = polarToXY(2 * Math.PI * i / n, r + 22);
+    const anchor = labelPt.x < cx - 5 ? 'end' : labelPt.x > cx + 5 ? 'start' : 'middle';
+    const mMeta = MODULES_META.find(mm => `module_${mm.id}` === m.id);
+    const label = mMeta ? mMeta.title.substring(0, 8) : m.name.substring(0, 8);
+    svg += `<text x="${labelPt.x}" y="${labelPt.y}" text-anchor="${anchor}" font-size="11" fill="#475569" font-weight="600">${label}</text>`;
+  });
+
+  // Data polygons
+  items.slice(0, 4).forEach((item, ci) => {
+    const scores = metrics.map(m => {
+      const s = getItemScore(item, m.id);
+      return s ? s.avg / 5 : 0;
+    });
+    const pts = scores.map((score, i) => {
+      const pt = polarToXY(2 * Math.PI * i / n, r * score);
+      return `${pt.x},${pt.y}`;
+    }).join(' ');
+    const color = colors[ci % colors.length];
+    svg += `<polygon points="${pts}" fill="${color}" fill-opacity="0.12" stroke="${color}" stroke-width="2"/>`;
+    scores.forEach((score, i) => {
+      const pt = polarToXY(2 * Math.PI * i / n, r * score);
+      svg += `<circle cx="${pt.x}" cy="${pt.y}" r="4" fill="${color}" stroke="white" stroke-width="2"/>`;
+    });
+  });
+
+  // Legend
+  let legendY = 10;
+  items.slice(0, 4).forEach((item, ci) => {
+    const color = colors[ci % colors.length];
+    svg += `<rect x="${size + 10}" y="${legendY}" width="14" height="14" rx="3" fill="${color}"/>`;
+    svg += `<text x="${size + 30}" y="${legendY + 11}" font-size="12" fill="#1E293B" font-weight="600">${item.label}</text>`;
+    legendY += 26;
+  });
+
+  svg += '</svg>';
+
+  output.innerHTML = `
+    <div class="chart-title">🕸️ مقارنة الأداء - مخطط الرادار</div>
+    <div class="chart-subtitle">يعرض نمط الأداء عبر الوحدات لكل عنصر</div>
+    <div class="radar-wrapper">${svg}</div>
+  `;
+}
+
+function renderHeatmap(items, metrics) {
+  const output = document.getElementById('chart-output');
+
+  function heatColor(val) {
+    if (!val) return '#F1F5F9';
+    if (val >= 4.5) return '#4F46E5';
+    if (val >= 4)   return '#3B82F6';
+    if (val >= 3.5) return '#22C55E';
+    if (val >= 3)   return '#A3E635';
+    if (val >= 2.5) return '#FCD34D';
+    if (val >= 2)   return '#F97316';
+    return '#EF4444';
+  }
+  function textColor(val) {
+    if (!val) return '#94A3B8';
+    if (val >= 3.5 || val < 2) return 'white';
+    return '#1E293B';
+  }
+
+  let html = `
+    <div class="chart-title">🌡️ خريطة الأداء الحرارية</div>
+    <div class="chart-subtitle">الألوان تعكس مستوى الأداء: بنفسجي=متميز، أخضر=جيد، أصفر=متوسط، أحمر=يحتاج تطوير</div>
+    <div style="overflow-x:auto;">
+    <table class="heatmap-table">
+      <tr>
+        <th>الموظف / الوحدة</th>
+  `;
+  metrics.forEach(m => {
+    const mMeta = MODULES_META.find(mm => `module_${mm.id}` === m.id);
+    html += `<th title="${m.name}">${mMeta ? mMeta.icon : '📊'} ${m.name.substring(0, 6)}</th>`;
+  });
+  html += '</tr>';
+
+  items.forEach(item => {
+    html += `<tr><td style="font-weight:700;text-align:right;">${item.label}</td>`;
+    metrics.forEach(m => {
+      const s = getItemScore(item, m.id);
+      const val = s ? s.avg : null;
+      const bg = heatColor(val);
+      const tc = textColor(val);
+      html += `<td style="background:${bg};color:${tc};" title="N=${s?.count || 0}">${val ? val.toFixed(1) : '—'}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</table></div>';
+  output.innerHTML = html;
+}
+
+function renderTable(items, metrics) {
+  const output = document.getElementById('chart-output');
+
+  let html = `
+    <div class="chart-title">📋 جدول المقارنة التفصيلي</div>
+    <div class="chart-subtitle">N: عدد الإجابات الصالحة لكل متوسط</div>
+    <div style="overflow-x:auto;">
+    <table class="comparison-table">
+      <tr>
+        <th>#</th>
+        <th>العنصر</th>
+        <th>النوع</th>
+  `;
+  metrics.forEach(m => html += `<th>${m.name}</th>`);
+  html += '<th>المتوسط العام</th></tr>';
+
+  items.forEach((item, idx) => {
+    const scores = metrics.map(m => getItemScore(item, m.id));
+    const validScores = scores.filter(s => s !== null).map(s => s.avg);
+    const overallAvg = validScores.length > 0 ? validScores.reduce((a,b)=>a+b,0)/validScores.length : null;
+
+    html += `<tr>
+      <td style="color:#94A3B8;font-size:0.8rem;">${idx + 1}</td>
+      <td><div style="font-weight:700">${item.label}</div><div style="font-size:0.75rem;color:#64748B">${item.subLabel}</div></td>
+      <td><span style="font-size:0.75rem;background:#F1F5F9;padding:2px 8px;border-radius:100px;">${item.type === 'employee' ? 'موظف' : 'فريق'}</span></td>
+    `;
+    scores.forEach(s => {
+      const cls = !s ? '' : s.avg >= 4.5 ? 'score-5' : s.avg >= 4 ? 'score-4' : s.avg >= 3 ? 'score-3' : s.avg >= 2 ? 'score-2' : 'score-1';
+      html += `<td><span class="score-pill ${cls}">${s ? s.avg.toFixed(2) : '—'}</span><div style="font-size:0.7rem;color:#94A3B8;margin-top:2px;">${s ? `N=${s.count}` : ''}</div></td>`;
+    });
+    const overallCls = !overallAvg ? '' : overallAvg >= 4.5 ? 'score-5' : overallAvg >= 4 ? 'score-4' : overallAvg >= 3 ? 'score-3' : overallAvg >= 2 ? 'score-2' : 'score-1';
+    html += `<td><span class="score-pill ${overallCls}" style="font-size:1rem;width:50px;height:32px;">${overallAvg ? overallAvg.toFixed(2) : '—'}</span></td>`;
+    html += '</tr>';
+  });
+
+  html += '</table></div>';
+  output.innerHTML = html;
+}
+
+// ==========================================
+// INSIGHTS GENERATOR
+// ==========================================
+function generateInsights() {
+  const section = document.getElementById('insights-section');
+  section.style.display = 'block';
+
+  const insights = [];
+
+  // Compute overall stats
+  const scores = EMPLOYEES.map(e => {
+    const s = getEmployeeOverallScore(e.id);
+    return s ? { ...e, avg: s.avg, count: s.count } : null;
+  }).filter(Boolean).sort((a, b) => b.avg - a.avg);
+
+  if (scores.length === 0) { section.innerHTML = ''; return; }
+
+  const topPerformer = scores[0];
+  const lowest = scores[scores.length - 1];
+  const overallAvg = scores.reduce((a, b) => a + b.avg, 0) / scores.length;
+  const highPerformers = scores.filter(s => s.avg >= 4).length;
+  const needsImprovement = scores.filter(s => s.avg < 3).length;
+
+  // Module strengths
+  const moduleAvgs = MODULES_META.map(m => {
+    const allScores = EMPLOYEES.map(e => getEmployeeModuleScore(e.id, m.id)).filter(Boolean).map(s => s.avg);
+    const avg = allScores.length > 0 ? allScores.reduce((a,b)=>a+b,0)/allScores.length : null;
+    return { ...m, avg };
+  }).filter(m => m.avg !== null).sort((a,b) => b.avg - a.avg);
+
+  insights.push({
+    icon: '🏆',
+    title: 'أعلى موظف أداءً',
+    body: `<span class="insight-highlight">${topPerformer.name}</span> حصل على متوسط <span class="insight-highlight">${topPerformer.avg.toFixed(2)}</span> من 5 (استناداً إلى ${topPerformer.count} وحدة تقييم). يمكن الاستفادة من تجربته في مبادرات تطوير الزملاء.`
+  });
+
+  insights.push({
+    icon: '📊',
+    title: 'المتوسط العام للفريق',
+    body: `المتوسط الكلي لجميع الموظفين هو <span class="insight-highlight">${overallAvg.toFixed(2)}</span>. يتجاوز <span class="insight-highlight">${highPerformers}</span> موظفًا المستوى "يتجاوز المتوقع" (4+)، بينما <span class="insight-highlight">${needsImprovement}</span> يحتاج إلى دعم تطويري.`
+  });
+
+  if (moduleAvgs.length > 0) {
+    const topModule = moduleAvgs[0];
+    const lowModule = moduleAvgs[moduleAvgs.length - 1];
+    insights.push({
+      icon: '💪',
+      title: 'نقاط القوة والتحسين على مستوى الوحدات',
+      body: `أقوى وحدة في الشركة: <span class="insight-highlight">${topModule.icon} ${topModule.title}</span> (${topModule.avg.toFixed(2)}). الوحدة التي تحتاج الاهتمام الأكبر: <span class="insight-highlight">${lowModule.icon} ${lowModule.title}</span> (${lowModule.avg.toFixed(2)}). يُوصى بتصميم برامج تدريبية تستهدف هذه الوحدة.`
+    });
+  }
+
+  // Team comparison
+  const teamScores = TEAMS.map(t => {
+    const s = getTeamScore(t);
+    return s ? { team: t, avg: s.avg, count: s.count } : null;
+  }).filter(Boolean).sort((a,b) => b.avg - a.avg);
+
+  if (teamScores.length > 1) {
+    const topTeam = teamScores[0];
+    const lowTeam = teamScores[teamScores.length - 1];
+    insights.push({
+      icon: '🏢',
+      title: 'مقارنة الفرق',
+      body: `أعلى فريق أداءً: <span class="insight-highlight">فريق ${topTeam.team}</span> (${topTeam.avg.toFixed(2)}). الفريق الأكثر احتياجاً للدعم: <span class="insight-highlight">فريق ${lowTeam.team}</span> (${lowTeam.avg.toFixed(2)}). فرق الأداء بينهما: ${(topTeam.avg - lowTeam.avg).toFixed(2)} درجة.`
+    });
+  }
+
+  const completionRate = (Object.keys(EVAL_DATA).length / (17 * 16) * 100).toFixed(0);
+  insights.push({
+    icon: '📈',
+    title: 'معدل إكمال الدورة',
+    body: `اكتملت <span class="insight-highlight">${Object.keys(EVAL_DATA).length}</span> تقييماً من أصل <span class="insight-highlight">272</span> تقييماً مطلوباً (${completionRate}%). ${completionRate >= 70 ? '✅ يمكن البدء في تحليل النتائج بموثوقية.' : '⚠️ ينصح بالانتظار حتى اكتمال ≥70% لضمان موثوقية التحليل.'}`
+  });
+
+  section.innerHTML = `
+    <div style="font-size:0.85rem;font-weight:700;color:#475569;margin-bottom:10px;padding:0 4px;">💡 تحليلات تلقائية</div>
+    ${insights.map(ins => `
+      <div class="insight-card">
+        <div class="insight-header">
+          <span class="insight-icon">${ins.icon}</span>
+          <span class="insight-title">${ins.title}</span>
+        </div>
+        <div class="insight-body">${ins.body}</div>
+      </div>
+    `).join('')}
+  `;
+}
+
+// ==========================================
+// RESULTS PANEL
+// ==========================================
+function updateResultsPanel() {
+  const list = document.getElementById('results-list');
+  const scores = EMPLOYEES.map(e => {
+    const s = getEmployeeOverallScore(e.id);
+    const moduleScores = MODULES_META.map(m => {
+      const ms = getEmployeeModuleScore(e.id, m.id);
+      return { ...m, avg: ms?.avg };
+    });
+    return { emp: e, overall: s, moduleScores };
+  }).sort((a, b) => (b.overall?.avg || 0) - (a.overall?.avg || 0));
+
+  list.innerHTML = scores.map(({ emp, overall, moduleScores }) => `
+    <div class="result-card ${state.selectedEmployee === emp.id ? 'selected' : ''}" onclick="selectEmployee(${emp.id})">
+      <div class="result-card-header">
+        <div>
+          <div class="result-name">${emp.name} ${emp.isManager ? '👔' : ''}</div>
+          <div class="result-team">${emp.team} • ${emp.role}</div>
+        </div>
+        <div style="text-align:center;">
+          <div class="result-score">${overall ? overall.avg.toFixed(2) : '—'}</div>
+          <div style="font-size:0.65rem;color:#94A3B8;">N=${getCompletionCount(emp.id)}</div>
+        </div>
+      </div>
+      <div class="result-modules">
+        ${moduleScores.map(ms => `
+          <div class="module-dot" style="background:${ms.avg ? scoreColor(ms.avg) : '#E2E8F0'};" title="${ms.title}: ${ms.avg ? ms.avg.toFixed(1) : 'لا بيانات'}">
+            ${ms.avg ? ms.avg.toFixed(1) : '—'}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectEmployee(empId) {
+  state.selectedEmployee = empId;
+  updateResultsPanel();
+
+  // Auto-load this employee in dimension zone if empty
+  if (state.zones.dimension.length === 0) {
+    const emp = EMPLOYEES.find(e => e.id === empId);
+    if (emp) {
+      const metricDef = allMetrics.find(m => m.id === `emp_${empId}`);
+      if (metricDef) {
+        state.zones.dimension.push({ ...metricDef });
+        renderZone('dimension');
+      }
+    }
+  }
+}
+
+function updateStats() {
+  const scores = EMPLOYEES.map(e => getEmployeeOverallScore(e.id)).filter(Boolean).map(s => s.avg);
+  const completed = Object.keys(EVAL_DATA).length;
+  const avg = scores.length > 0 ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(2) : '—';
+  const sortedScores = [...scores].sort((a,b) => b-a);
+
+  document.getElementById('stat-avg').textContent = avg;
+  document.getElementById('stat-complete').textContent = completed;
+  document.getElementById('stat-top').textContent = sortedScores[0]?.toFixed(2) || '—';
+  document.getElementById('stat-lowest').textContent = (sortedScores[sortedScores.length-1])?.toFixed(2) || '—';
+}
+
+// ==========================================
+// CHART TYPE SWITCH
+// ==========================================
+function setChartType(type, btn) {
+  state.chartType = type;
+  document.querySelectorAll('.chart-type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (state.analysisData) runAnalysis();
+}
+
+// ==========================================
+// TOOLTIP
+// ==========================================
+function showTooltip(event, text) {
+  const tt = document.getElementById('tooltip');
+  tt.textContent = text;
+  tt.style.display = 'block';
+  tt.style.left = (event.clientX + 12) + 'px';
+  tt.style.top = (event.clientY - 30) + 'px';
+}
+function hideTooltip() {
+  document.getElementById('tooltip').style.display = 'none';
+}
+
+// ==========================================
+// MISC
+// ==========================================
+function resetBuilder() {
+  clearAllZones();
+  state.chartType = 'bar';
+  document.querySelectorAll('.chart-type-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.chart-type-btn').classList.add('active');
+}
+
+function saveConfiguration() {
+  const config = { zones: state.zones, chartType: state.chartType };
+  localStorage.setItem('morasalaty_360_analysis_config', JSON.stringify(config));
+  alert('✅ تم حفظ إعداد التحليل بنجاح');
+}
+
+function exportChart() {
+  window.print();
+}
+
+// ==========================================
+// INIT
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  buildMetricsList();
+  loadData();
+
+  // Load saved config
+  try {
+    const saved = localStorage.getItem('morasalaty_360_analysis_config');
+    if (saved) {
+      const config = JSON.parse(saved);
+      state.zones = config.zones || state.zones;
+      state.chartType = config.chartType || 'bar';
+      ['dimension','values','group','filter'].forEach(z => renderZone(z));
+    }
+  } catch(e) {}
+});
+</script>
+</body>
+</html>
