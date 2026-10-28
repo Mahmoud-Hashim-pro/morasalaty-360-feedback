@@ -1,6 +1,8 @@
 # 🔄 مراسلاتي 360° — نظام التقييم المتبادل الشامل ومحرك التحليل التفاعلي
 ## Morasalaty & Samaa Group — 360-Degree Employee Feedback & Drag-and-Drop Analytics Engine
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FMahmoud-Hashim-pro%2Fmorasalaty-360-feedback)
+
 نظام متكامل واحترافي مصمم لتقييم أداء موظفي شركة **مراسلاتي (Morasalaty)** ومجموعة **سماء (Samaa Group)**، يعتمد على معايير التقييم المتبادل الشامل **(360-Degree Feedback)**، مع شاشة تحليل تفاعلية ذكية قائمة على السحب والإفلات **(Drag & Drop Analytics)**.
 
 ---
