@@ -98,13 +98,14 @@ module.exports = async function handler(req, res) {
 
   const sql = getSql();
   const parsedUrl = new URL(req.url, 'http://localhost');
-  const pathname = parsedUrl.pathname.replace(/^\/api/, ''); // normalize /api/auth/login -> /auth/login
+  let pathname = parsedUrl.pathname.replace(/^\/api/, ''); // normalize /api/auth/login -> /auth/login
+  if (!pathname.startsWith('/')) pathname = '/' + pathname;
 
   try {
     // -------------------------------------------------------------------------
     // 1. Health check & System Info
     // -------------------------------------------------------------------------
-    if (pathname === '/health' || pathname === '') {
+    if (pathname === '/health' || pathname === '' || pathname === '/') {
       const timeRes = await sql`SELECT NOW() as db_time;`;
       return sendJson(res, 200, {
         ok: true,
@@ -118,7 +119,7 @@ module.exports = async function handler(req, res) {
     // -------------------------------------------------------------------------
     // 2. Authentication: Login
     // -------------------------------------------------------------------------
-    if (pathname === '/auth/login' && req.method === 'POST') {
+    if ((pathname === '/auth/login' || pathname === '/login') && req.method === 'POST') {
       const { email, password } = await parseBody(req);
       if (!email) {
         return sendJson(res, 400, { ok: false, error: 'البريد الإلكتروني مطلوب' });
@@ -192,7 +193,7 @@ module.exports = async function handler(req, res) {
     // -------------------------------------------------------------------------
     // 3. Authentication: Current User (/auth/me)
     // -------------------------------------------------------------------------
-    if (pathname === '/auth/me' && req.method === 'GET') {
+    if ((pathname === '/auth/me' || pathname === '/me') && req.method === 'GET') {
       const authUser = await authenticateRequest(req, sql);
       if (!authUser) {
         return sendJson(res, 401, { ok: false, error: 'الجلسة غير صالحة أو منتهية' });
@@ -203,7 +204,7 @@ module.exports = async function handler(req, res) {
     // -------------------------------------------------------------------------
     // 4. Authentication: Logout
     // -------------------------------------------------------------------------
-    if (pathname === '/auth/logout' && req.method === 'POST') {
+    if ((pathname === '/auth/logout' || pathname === '/logout') && req.method === 'POST') {
       const authHeader = req.headers['authorization'] || '';
       const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : null;
       if (token) {
@@ -215,7 +216,7 @@ module.exports = async function handler(req, res) {
     // -------------------------------------------------------------------------
     // 5. Public / Authed Employees List
     // -------------------------------------------------------------------------
-    if (pathname === '/employees' && req.method === 'GET') {
+    if ((pathname === '/employees' || pathname === '/employees/') && req.method === 'GET') {
       const dbEmployees = await sql`
         SELECT id, name, email, role, team, is_manager as "isManager", manager_id as "managerId", channels
         FROM m360_users
@@ -228,7 +229,7 @@ module.exports = async function handler(req, res) {
     // -------------------------------------------------------------------------
     // 6. Evaluations: List tasks for the logged in employee
     // -------------------------------------------------------------------------
-    if (pathname === '/evaluations' && req.method === 'GET') {
+    if ((pathname === '/evaluations' || pathname === '/evaluations/') && req.method === 'GET') {
       const authUser = await authenticateRequest(req, sql);
       if (!authUser) {
         return sendJson(res, 401, { ok: false, error: 'غير مصرح بالدخول' });
@@ -299,7 +300,7 @@ module.exports = async function handler(req, res) {
     // -------------------------------------------------------------------------
     // 7. Evaluations: Save Draft (/evaluations/save)
     // -------------------------------------------------------------------------
-    if (pathname === '/evaluations/save' && req.method === 'POST') {
+    if ((pathname === '/evaluations/save' || pathname === '/save') && req.method === 'POST') {
       const authUser = await authenticateRequest(req, sql);
       if (!authUser) {
         return sendJson(res, 401, { ok: false, error: 'غير مصرح بالدخول' });
@@ -354,7 +355,7 @@ module.exports = async function handler(req, res) {
     // -------------------------------------------------------------------------
     // 8. Evaluations: Submit Final (/evaluations/submit)
     // -------------------------------------------------------------------------
-    if (pathname === '/evaluations/submit' && req.method === 'POST') {
+    if ((pathname === '/evaluations/submit' || pathname === '/submit') && req.method === 'POST') {
       const authUser = await authenticateRequest(req, sql);
       if (!authUser) {
         return sendJson(res, 401, { ok: false, error: 'غير مصرح بالدخول' });
@@ -410,7 +411,7 @@ module.exports = async function handler(req, res) {
     // -------------------------------------------------------------------------
     // 9. Analytics: Aggregated metrics & raw data for Drag-and-Drop
     // -------------------------------------------------------------------------
-    if (pathname === '/analytics' && req.method === 'GET') {
+    if ((pathname === '/analytics' || pathname === '/analytics/') && req.method === 'GET') {
       // Fetch all employees
       const employees = await sql`
         SELECT id, name, email, role, team, is_manager as "isManager", manager_id as "managerId", channels

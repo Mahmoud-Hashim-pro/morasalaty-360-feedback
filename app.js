@@ -326,9 +326,15 @@ function getScoreClass(score) {
 }
 
 function showScreen(screenId) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    s.style.setProperty('display', 'none', 'important');
+  });
   const el = document.getElementById(screenId);
-  if (el) el.classList.add('active');
+  if (el) {
+    el.classList.add('active');
+    el.style.setProperty('display', screenId === 'screen-login' ? 'flex' : 'block', 'important');
+  }
   window.scrollTo(0, 0);
 }
 

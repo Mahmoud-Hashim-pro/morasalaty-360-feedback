@@ -19,11 +19,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .btn-sm{padding:6px 14px;font-size:.82rem;}
 .btn-lg{padding:14px 32px;font-size:1rem;}
 /* ---- SCREENS ---- */
-.screen{display:none;min-height:100vh;}
-.screen.active{display:block;}
+.screen{display:none !important;min-height:100vh;}
+.screen.active{display:block !important;}
 /* ========== LOGIN ========== */
-#screen-login{background:linear-gradient(135deg,#1E1B4B 0%,#4F46E5 50%,#7C3AED 100%);display:flex;align-items:center;justify-content:center;}
-#screen-login.active{display:flex;}
+#screen-login{background:linear-gradient(135deg,#1E1B4B 0%,#4F46E5 50%,#7C3AED 100%);min-height:100vh;}
+#screen-login.active{display:flex !important;align-items:center;justify-content:center;}
 .login-card{background:white;border-radius:20px;padding:40px;width:100%;max-width:420px;box-shadow:0 25px 50px rgba(0,0,0,.3);margin:20px;}
 .login-logo{text-align:center;margin-bottom:28px;}
 .login-logo .logo-icon{font-size:3.5rem;display:block;margin-bottom:8px;}
