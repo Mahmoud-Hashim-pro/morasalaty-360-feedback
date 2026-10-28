@@ -283,7 +283,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <div class="topbar">
     <div class="topbar-brand"><span class="brand-icon">🔄</span>مراسلاتي 360°</div>
     <div class="topbar-right">
-      <span style="font-size:.8rem;opacity:.8;">دورة Q4 · 2024</span>
+      <div id="cloud-status-badge" style="display:flex;align-items:center;gap:6px;font-size:0.75rem;background:rgba(16,185,129,0.22);border:1px solid rgba(16,185,129,0.35);color:#ECFDF5;padding:4px 10px;border-radius:100px;">
+        <span style="display:inline-block;width:7px;height:7px;background:#34D399;border-radius:50%;box-shadow:0 0 6px #34D399;"></span>
+        <span id="cloud-status-text">متصل بالسحابة</span>
+      </div>
+      <span style="font-size:.8rem;opacity:.8;">دورة 2026</span>
       <div class="topbar-user">
         <div class="topbar-avatar" id="topbar-avatar">م</div>
         <span id="topbar-name"></span>
@@ -361,6 +365,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <div class="topbar">
     <div class="topbar-brand"><span class="brand-icon">📊</span>لوحة تحكم الموارد البشرية</div>
     <div class="topbar-right">
+      <div id="hr-cloud-status-badge" style="display:flex;align-items:center;gap:6px;font-size:0.75rem;background:rgba(16,185,129,0.22);border:1px solid rgba(16,185,129,0.35);color:#ECFDF5;padding:4px 10px;border-radius:100px;">
+        <span style="display:inline-block;width:7px;height:7px;background:#34D399;border-radius:50%;box-shadow:0 0 6px #34D399;"></span>
+        <span id="hr-cloud-status-text">متصل بالسحابة (Neon DB)</span>
+      </div>
       <button class="topbar-btn" onclick="openAnalysis()">📊 محرك التحليل</button>
       <button class="topbar-btn" onclick="doLogout()">خروج</button>
     </div>

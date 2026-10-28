@@ -574,7 +574,11 @@ svg.radar-svg { overflow: visible; }
     محرك التحليل التفاعلي — مراسلاتي 360°
   </div>
   <div class="header-actions">
-    <span id="cycle-label" style="font-size:0.85rem;opacity:0.8;">دورة Q4 - 2024</span>
+    <div id="live-db-pill" style="display:flex;align-items:center;gap:6px;font-size:0.78rem;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.35);color:#A7F3D0;padding:5px 12px;border-radius:100px;">
+      <span style="width:8px;height:8px;border-radius:50%;background:#10B981;display:inline-block;box-shadow:0 0 8px #10B981;"></span>
+      <span id="live-db-text">متصل بقاعدة البيانات الحية</span>
+    </div>
+    <span id="cycle-label" style="font-size:0.85rem;opacity:0.8;">دورة 2026</span>
     <button class="btn btn-outline" onclick="resetBuilder()">🔄 إعادة ضبط</button>
     <button class="btn btn-white" onclick="generateInsights()">💡 تحليل تلقائي</button>
     <button class="btn btn-white" onclick="window.print()">🖨️ طباعة</button>
@@ -781,9 +785,44 @@ let state = {
   analysisData: null,
 };
 
-// Load demo data from main app OR generate
+// Load data from live PostgreSQL API OR fallback to local cache
 let EVAL_DATA = {};
-function loadData() {
+async function loadData() {
+  const dbText = document.getElementById('live-db-text');
+  try {
+    const res = await fetch('/api/analytics');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.ok && data.rawEvaluations && data.rawEvaluations.length > 0) {
+        EVAL_DATA = {};
+        data.rawEvaluations.forEach(ev => {
+          const key = `${ev.evaluator_id}_${ev.evaluatee_id}`;
+          EVAL_DATA[key] = {
+            id: ev.id,
+            evaluatorId: ev.evaluator_id,
+            evaluateeId: ev.evaluatee_id,
+            cycleId: ev.cycle_id,
+            status: ev.status,
+            progressPct: ev.progress_pct,
+            completedAt: ev.completed_at,
+            updatedAt: ev.updated_at,
+            moduleAnswers: ev.module_answers || {},
+            textAnswers: ev.text_answers || {},
+            managerAnswers: ev.manager_answers || {}
+          };
+        });
+        if (dbText) dbText.innerText = `قاعدة بيانات حية (${data.rawEvaluations.length} تقييماً)`;
+        updateResultsPanel();
+        updateStats();
+        return;
+      }
+    }
+  } catch(e) {
+    console.warn("Could not fetch /api/analytics, using local cache:", e);
+    if (dbText) dbText.innerText = 'وضع عدم الاتصال (بيانات محلية)';
+  }
+
+  // Fallback to localStorage
   try {
     const stored = localStorage.getItem('morasalaty_360_data');
     if (stored) {
@@ -791,7 +830,8 @@ function loadData() {
       EVAL_DATA = parsed.evaluations || {};
     }
   } catch(e) {}
-  // If no data, generate demo
+
+  // If still no data, generate demo
   if (Object.keys(EVAL_DATA).length === 0) {
     generateDemoData();
   }

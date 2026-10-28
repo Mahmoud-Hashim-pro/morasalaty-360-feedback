@@ -3,17 +3,25 @@
   "version": "1.0.0",
   "description": "نظام التقييم المتبادل الشامل ومحرك التحليل التفاعلي لموظفي شركة مراسلاتي ومجموعة سماء",
   "private": true,
+  "main": "server.js",
   "scripts": {
-    "start": "serve .",
-    "dev": "python -m http.server 8080"
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node test/api_test.js",
+    "db:init": "node scripts/init_db.js"
   },
   "keywords": [
     "360-degree-feedback",
     "hr-analytics",
     "drag-and-drop",
     "morasalaty",
-    "samaagroup"
+    "samaagroup",
+    "neon-postgres",
+    "vercel"
   ],
   "author": "Mahmoud Hashim",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0"
+  }
 }

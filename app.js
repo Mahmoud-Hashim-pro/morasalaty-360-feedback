@@ -1,7 +1,10 @@
 // =========================================================
 // مراسلاتي 360° — نظام التقييم المتبادل المتكامل والتحليل الذكي
+// متصل بقاعدة بيانات PostgreSQL السحابية (Neon DB) مع خادم API متكامل
 // =========================================================
 
+const API_BASE = '/api';
+const TOKEN_KEY = 'm360_token';
 const STORAGE_KEY = 'morasalaty_360_data';
 const SESSION_USER_KEY = 'morasalaty_current_user';
 
@@ -39,9 +42,72 @@ let ddState = {
 };
 
 // =========================================================
-// Storage & Demo Data Generation
+// API & Authentication Utilities
 // =========================================================
-function loadEvalData() {
+function getAuthToken() {
+  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+}
+
+function setAuthToken(token) {
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+    sessionStorage.setItem(TOKEN_KEY, token);
+  }
+}
+
+function clearAuth() {
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(SESSION_USER_KEY);
+  currentUser = null;
+}
+
+async function apiCall(endpoint, method = 'GET', data = null) {
+  const token = getAuthToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const opts = { method, headers };
+  if (data && (method === 'POST' || method === 'PUT')) {
+    opts.body = JSON.stringify(data);
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}${endpoint}`, opts);
+    const json = await res.json().catch(() => null);
+    return { status: res.status, ok: res.ok, data: json };
+  } catch (err) {
+    console.warn(`[API] Network error calling ${endpoint}:`, err);
+    return { status: 0, ok: false, data: null, error: err };
+  }
+}
+
+function updateCloudStatusBadge(isOnline, text) {
+  const badges = [
+    { el: document.getElementById('cloud-status-badge'), txt: document.getElementById('cloud-status-text') },
+    { el: document.getElementById('hr-cloud-status-badge'), txt: document.getElementById('hr-cloud-status-text') }
+  ];
+  badges.forEach(b => {
+    if (b.el && b.txt) {
+      if (isOnline) {
+        b.el.style.background = 'rgba(16,185,129,0.22)';
+        b.el.style.borderColor = 'rgba(16,185,129,0.35)';
+        b.txt.innerText = text || 'متصل بالسحابة';
+      } else {
+        b.el.style.background = 'rgba(239,68,68,0.2)';
+        b.el.style.borderColor = 'rgba(239,68,68,0.35)';
+        b.txt.innerText = text || 'وضع غير متصل';
+      }
+    }
+  });
+}
+
+// =========================================================
+// Storage & Synchronization
+// =========================================================
+async function loadEvalData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -54,6 +120,65 @@ function loadEvalData() {
 
   if (!EVAL_DATA || Object.keys(EVAL_DATA).length === 0) {
     generateInitialDemoData();
+  }
+
+  // Attempt live sync with server
+  await loadRemoteEvaluations();
+}
+
+async function loadRemoteEvaluations() {
+  if (!currentUser) return;
+  try {
+    if (currentUser.isHRAdmin || currentUser.id === 0) {
+      const res = await apiCall('/analytics');
+      if (res.ok && res.data && res.data.rawEvaluations) {
+        res.data.rawEvaluations.forEach(ev => {
+          const key = `${ev.evaluator_id}_${ev.evaluatee_id}`;
+          EVAL_DATA[key] = {
+            id: ev.id,
+            evaluatorId: ev.evaluator_id,
+            evaluateeId: ev.evaluatee_id,
+            cycleId: ev.cycle_id,
+            status: ev.status,
+            progress: ev.progress_pct,
+            moduleAnswers: ev.module_answers || {},
+            textAnswers: ev.text_answers || {},
+            managerAnswers: ev.manager_answers || {},
+            completedAt: ev.completed_at,
+            updatedAt: ev.updated_at
+          };
+        });
+        saveEvalData();
+        updateCloudStatusBadge(true, `متصل بالسحابة (${res.data.rawEvaluations.length} تقييم)`);
+        return;
+      }
+    } else {
+      const res = await apiCall('/evaluations');
+      if (res.ok && res.data && res.data.colleagues) {
+        res.data.colleagues.forEach(col => {
+          const key = `${currentUser.id}_${col.employee.id}`;
+          EVAL_DATA[key] = {
+            id: col.evaluationId,
+            evaluatorId: currentUser.id,
+            evaluateeId: col.employee.id,
+            cycleId: '2026-Q1',
+            status: col.status,
+            progress: col.progressPct,
+            moduleAnswers: col.moduleAnswers || {},
+            textAnswers: col.textAnswers || {},
+            managerAnswers: col.managerAnswers || {},
+            completedAt: col.completedAt,
+            updatedAt: col.updatedAt
+          };
+        });
+        saveEvalData();
+        updateCloudStatusBadge(true, 'متصل بالسحابة (مزامنة فورية)');
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('Sync failed, continuing with local data:', err);
+    updateCloudStatusBadge(false, 'وضع عدم الاتصال (محلي)');
   }
 }
 
@@ -237,20 +362,22 @@ function openAnalysis() {
 }
 
 // Quick 1-click login test helper
-function fillLogin(email, pass) {
+async function fillLogin(email, pass) {
   document.getElementById('login-email').value = email;
   document.getElementById('login-pass').value = pass;
-  doLogin();
+  await doLogin();
 }
 
 // =========================================================
 // Authentication
 // =========================================================
-function doLogin() {
+async function doLogin() {
   const emailInput = document.getElementById('login-email');
   const passInput = document.getElementById('login-pass');
   const errEmail = document.getElementById('err-email');
   const errPass = document.getElementById('err-pass');
+  const submitBtn = document.querySelector('#screen-login button[type="submit"]') ||
+                    document.querySelector('#screen-login .btn-primary');
 
   errEmail.style.display = 'none';
   errPass.style.display = 'none';
@@ -269,7 +396,46 @@ function doLogin() {
     return;
   }
 
-  // Check HR Admin
+  const origBtnText = submitBtn ? submitBtn.innerText : '';
+  if (submitBtn) {
+    submitBtn.innerText = 'جاري التحقق والاتصال بقاعدة البيانات...';
+    submitBtn.disabled = true;
+  }
+
+  try {
+    // 1. Try real backend API call
+    const res = await apiCall('/auth/login', 'POST', { email, password: pass });
+    if (res.ok && res.data && res.data.ok) {
+      setAuthToken(res.data.token);
+      currentUser = res.data.user;
+      sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(currentUser));
+
+      await loadRemoteEvaluations();
+
+      if (currentUser.isHRAdmin || currentUser.id === 0) {
+        showScreen('screen-hr');
+        renderHrDashboard();
+      } else {
+        showScreen('screen-dashboard');
+        renderEmployeeDashboard();
+      }
+      return;
+    } else if (res.status === 401 || res.status === 400) {
+      const msg = res.data?.error || 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+      errPass.innerText = msg;
+      errPass.style.display = 'block';
+      return;
+    }
+  } catch (err) {
+    console.warn('Backend login unavailable, checking offline mode...', err);
+  } finally {
+    if (submitBtn) {
+      submitBtn.innerText = origBtnText;
+      submitBtn.disabled = false;
+    }
+  }
+
+  // 2. Offline / local fallback
   if ((email === 'hr.admin@samaagroup.net' || email === 'hr.admin@morasalaty.com') && (pass === 'hradmin2024' || pass === DEMO_PASSWORDS[email])) {
     currentUser = HR_ADMIN;
     sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(currentUser));
@@ -278,7 +444,6 @@ function doLogin() {
     return;
   }
 
-  // Check Employee
   const emp = EMPLOYEES.find(e => e.email.toLowerCase() === email);
   if (!emp) {
     errEmail.innerText = 'البريد الإلكتروني غير مسجل في قائمة موظفي شركة مراسلاتي';
@@ -299,9 +464,11 @@ function doLogin() {
   renderEmployeeDashboard();
 }
 
-function doLogout() {
-  currentUser = null;
-  sessionStorage.removeItem(SESSION_USER_KEY);
+async function doLogout() {
+  try {
+    await apiCall('/auth/logout', 'POST');
+  } catch (e) {}
+  clearAuth();
   document.getElementById('login-email').value = '';
   document.getElementById('login-pass').value = '';
   showScreen('screen-login');
@@ -810,6 +977,42 @@ function switchToDetailedModule(idx) {
   selectModule(idx);
 }
 
+let remoteSaveTimer = null;
+function scheduleRemoteSave(evaluateeId) {
+  clearTimeout(remoteSaveTimer);
+  flashSaveStatus('saving');
+  remoteSaveTimer = setTimeout(async () => {
+    if (!currentUser) return;
+    const key = `${currentUser.id}_${evaluateeId}`;
+    const ev = EVAL_DATA[key];
+    if (!ev) return;
+
+    let answeredCount = 0;
+    for (let m = 1; m <= 10; m++) {
+      const ma = ev.moduleAnswers?.[`m${m}`];
+      if (ma) answeredCount += Object.keys(ma).length;
+    }
+    const pct = Math.min(99, Math.round((answeredCount / 150) * 100));
+
+    try {
+      const res = await apiCall('/evaluations/save', 'POST', {
+        evaluateeId,
+        moduleAnswers: ev.moduleAnswers || {},
+        textAnswers: ev.textAnswers || {},
+        managerAnswers: ev.managerAnswers || {},
+        progressPct: pct
+      });
+      if (res.ok) {
+        flashSaveStatus('saved');
+      } else {
+        flashSaveStatus('local');
+      }
+    } catch(e) {
+      flashSaveStatus('local');
+    }
+  }, 400);
+}
+
 function handleQuickModuleAnswer(moduleId, rawVal) {
   const evaluateeId = currentSurvey.evaluateeId;
   const key = `${currentUser.id}_${evaluateeId}`;
@@ -826,7 +1029,7 @@ function handleQuickModuleAnswer(moduleId, rawVal) {
   EVAL_DATA[key].status = 'in_progress';
   saveEvalData();
 
-  flashSaveStatus();
+  scheduleRemoteSave(evaluateeId);
   renderSurvey();
 }
 
@@ -843,7 +1046,7 @@ function handleScaleAnswer(moduleId, questionId, rawValue) {
   EVAL_DATA[key].status = 'in_progress';
   saveEvalData();
 
-  flashSaveStatus();
+  scheduleRemoteSave(evaluateeId);
   updateModuleHeaderProgress();
 }
 
@@ -857,7 +1060,7 @@ function handleManagerAnswer(questionId, rawValue) {
   EVAL_DATA[key].managerAnswers[questionId] = val;
   saveEvalData();
 
-  flashSaveStatus();
+  scheduleRemoteSave(evaluateeId);
 }
 
 function handleTextAnswer(questionId, text) {
@@ -869,15 +1072,24 @@ function handleTextAnswer(questionId, text) {
   EVAL_DATA[key].textAnswers[questionId] = text;
   saveEvalData();
 
-  flashSaveStatus();
+  scheduleRemoteSave(evaluateeId);
 }
 
-function flashSaveStatus() {
+function flashSaveStatus(state = 'saved') {
   const el = document.getElementById('survey-save-status');
-  if (el) {
-    el.innerText = 'تم الحفظ تلقائياً ✓';
+  if (!el) return;
+
+  if (state === 'saving') {
+    el.innerText = '☁️ جاري الحفظ في السحابة...';
+    el.style.color = '#FEF08A';
+  } else if (state === 'saved') {
+    el.innerText = '✓ تم الحفظ في قاعدة البيانات';
+    el.style.color = '#86EFAC';
+    setTimeout(() => { if (el) el.innerText = ''; }, 2000);
+  } else {
+    el.innerText = 'تم الحفظ محلياً ✓';
     el.style.color = '#A5B4FC';
-    setTimeout(() => { if (el) el.innerText = ''; }, 1600);
+    setTimeout(() => { if (el) el.innerText = ''; }, 2000);
   }
 }
 
@@ -917,7 +1129,7 @@ function submitSurvey() {
       <h3 style="margin-bottom:8px;">تأكيد اعتماد وإرسال تقييم ${evaluatee.name}</h3>
       <p style="font-size:0.88rem;color:var(--text-muted);line-height:1.6;">
         تمت الإجابة على <strong>${totalAnswered}</strong> عنصراً. 
-        بمجرد الاعتماد النهائي، تُقفل الاستمارة وتُرسل مباشرة إلى محرك التحليل ولوحة تحكم الموارد البشرية بسرية تامة.
+        بمجرد الاعتماد النهائي، تُقفل الاستمارة وتُرسل مباشرة إلى قاعدة البيانات السحابية ومحرك التحليل ولوحة الموارد البشرية بسرية تامة.
       </p>
     </div>
   `;
@@ -930,14 +1142,35 @@ function submitSurvey() {
   openModal('تأكيد إرسال التقييم', modalBody, modalFooter);
 }
 
-function confirmSubmitSurvey(key) {
-  if (EVAL_DATA[key]) {
-    EVAL_DATA[key].status = 'completed';
-    EVAL_DATA[key].completedAt = new Date().toISOString();
+async function confirmSubmitSurvey(key) {
+  const evaluateeId = currentSurvey.evaluateeId;
+  const ev = EVAL_DATA[key];
+
+  if (ev) {
+    ev.status = 'completed';
+    ev.completedAt = new Date().toISOString();
     saveEvalData();
   }
   closeModal();
-  showToast('تم اعتماد التقييم بنجاح وتحديث لوحة المتابعة!');
+
+  try {
+    const res = await apiCall('/evaluations/submit', 'POST', {
+      evaluateeId,
+      moduleAnswers: ev?.moduleAnswers || {},
+      textAnswers: ev?.textAnswers || {},
+      managerAnswers: ev?.managerAnswers || {}
+    });
+    if (res.ok) {
+      showToast('✓ تم اعتماد التقييم بنجاح وحفظه في قاعدة البيانات المركزية!');
+    } else {
+      showToast('تم اعتماد التقييم محلياً وجاري المزامنة');
+    }
+  } catch (e) {
+    showToast('تم اعتماد التقييم محلياً (وضع عدم الاتصال)');
+  }
+
+  // Refresh evaluations from server to ensure accurate live state
+  await loadRemoteEvaluations();
   goToDashboard();
 }
 
@@ -2077,17 +2310,44 @@ function renderDdChart() {
 }
 
 // =========================================================
-// Initialization
+// Initialization & Session Recovery
 // =========================================================
-document.addEventListener('DOMContentLoaded', () => {
-  loadEvalData();
+document.addEventListener('DOMContentLoaded', async () => {
+  // 1. First load local storage cache so UI renders immediately
+  await loadEvalData();
 
-  // Restore active user session if found
+  // 2. Verify active session token with backend API (Neon DB)
+  const token = getAuthToken();
+  if (token) {
+    try {
+      const res = await apiCall('/auth/me');
+      if (res.ok && res.data && res.data.user) {
+        currentUser = res.data.user;
+        sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(currentUser));
+        await loadRemoteEvaluations();
+
+        if (currentUser.isHRAdmin || currentUser.id === 0) {
+          showScreen('screen-hr');
+          renderHrDashboard();
+        } else {
+          showScreen('screen-dashboard');
+          renderEmployeeDashboard();
+        }
+        return;
+      } else {
+        clearAuth();
+      }
+    } catch (e) {
+      console.warn('Session verification network error:', e);
+    }
+  }
+
+  // 3. Fallback to offline cached session if available
   try {
     const rawUser = sessionStorage.getItem(SESSION_USER_KEY);
     if (rawUser) {
       currentUser = JSON.parse(rawUser);
-      if (currentUser.id === 0) {
+      if (currentUser.isHRAdmin || currentUser.id === 0) {
         showScreen('screen-hr');
         renderHrDashboard();
         return;
