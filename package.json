@@ -1,0 +1,19 @@
+{
+  "name": "morasalaty-360-feedback",
+  "version": "1.0.0",
+  "description": "نظام التقييم المتبادل الشامل ومحرك التحليل التفاعلي لموظفي شركة مراسلاتي ومجموعة سماء",
+  "private": true,
+  "scripts": {
+    "start": "serve .",
+    "dev": "python -m http.server 8080"
+  },
+  "keywords": [
+    "360-degree-feedback",
+    "hr-analytics",
+    "drag-and-drop",
+    "morasalaty",
+    "samaagroup"
+  ],
+  "author": "Mahmoud Hashim",
+  "license": "UNLICENSED"
+}
