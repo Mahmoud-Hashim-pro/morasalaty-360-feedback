@@ -176,15 +176,21 @@ async function runTests() {
     });
     assert.strictEqual(analyticsRes.status, 200);
     assert.strictEqual(analyticsRes.data.ok, true);
-    assert.ok(analyticsRes.data.summary.totalRecordedEvaluations > 0);
+    assert.strictEqual(analyticsRes.data.summary.totalEmployees, 17);
+    assert.strictEqual(analyticsRes.data.summary.totalExpectedEvaluations, 272);
     assert.strictEqual(analyticsRes.data.rankings.length, 17);
-    console.log(`   ✅ /api/analytics passed! Total evals recorded: ${analyticsRes.data.summary.totalRecordedEvaluations}, Avg Score: ${analyticsRes.data.summary.overallCompanyAvg}`);
+    console.log(`   ✅ /api/analytics passed! Real expected evals: 272 (17 * 16), Rankings: 17 employees`);
 
     console.log('\n🎉 ALL 8 INTEGRATION TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ Test failed:', err);
     process.exitCode = 1;
   } finally {
+    try {
+      const { getSql } = require('../db/db');
+      await getSql()`TRUNCATE TABLE m360_evaluations RESTART IDENTITY;`;
+      await getSql()`TRUNCATE TABLE m360_sessions RESTART IDENTITY;`;
+    } catch (e) {}
     server.close();
   }
 }

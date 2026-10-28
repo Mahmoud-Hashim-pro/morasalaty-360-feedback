@@ -118,11 +118,7 @@ async function loadEvalData() {
     console.error("Error reading localStorage:", e);
   }
 
-  if (!EVAL_DATA || Object.keys(EVAL_DATA).length === 0) {
-    generateInitialDemoData();
-  }
-
-  // Attempt live sync with server
+  // Pure real data sync with PostgreSQL server
   await loadRemoteEvaluations();
 }
 
@@ -192,97 +188,6 @@ function saveEvalData() {
   } catch (e) {
     console.error("Error saving localStorage:", e);
   }
-}
-
-function generateInitialDemoData() {
-  EVAL_DATA = {};
-  const weights = [0.04, 0.08, 0.18, 0.38, 0.32];
-  function randScore() {
-    const r = Math.random();
-    let cum = 0;
-    for (let i = 0; i < weights.length; i++) {
-      cum += weights[i];
-      if (r < cum) return i + 1;
-    }
-    return 4;
-  }
-
-  const sampleStrengths = [
-    "التزام عالي بالمواعيد ودقة استثنائية في تنفيذ المهام البرمجية المعقدة.",
-    "روح تعاون إيجابية للغاية ومبادرة مستمرة لمساعدة الزملاء في حل المشكلات.",
-    "تواصل شفاف وفعال وقدرة عالية على تبسيط المتطلبات التقنية ونقل المعرفة.",
-    "اهتمام كبير بجودة المخرجات والتفاصيل الفنية مع تقليل ملحوظ بنسبة الأخطاء.",
-    "مرونة وسرعة في استيعاب التغييرات والملاحظات وتطبيقها باحترافية وأسلوب راقٍ."
-  ];
-
-  const sampleImprovements = [
-    "تعزيز المشاركة في النقاشات الاستراتيجية والتخطيط طويل المدى للفريق.",
-    "تفويض بعض المهام الروتينية للتركيز على المبادرات الأكثر تأثيراً وقيمة.",
-    "تطوير مهارات التوثيق ونقل المعرفة لأعضاء الفريق الجدد بشكل منظم.",
-    "إدارة الأولويات بشكل أفضل عند تزامن أكثر من مهمة عاجلة تحت الضغط."
-  ];
-
-  EMPLOYEES.forEach(evaluator => {
-    EMPLOYEES.forEach(evaluatee => {
-      if (evaluator.id === evaluatee.id) return; // Strict prevention of self evaluation
-      const key = `${evaluator.id}_${evaluatee.id}`;
-
-      let isComplete = false;
-      let isInProgress = false;
-
-      // Realistic initial state: Mahmoud Hashim (id 8) and Hazem Khaled (id 1) have completed 7, 2 in-progress, rest pending
-      if (evaluator.id === 8 || evaluator.id === 1) {
-        if (evaluatee.id <= 7) isComplete = true;
-        else if (evaluatee.id <= 9) isInProgress = true;
-      } else {
-        const rand = Math.random();
-        if (rand < 0.72) isComplete = true;
-        else if (rand < 0.85) isInProgress = true;
-      }
-
-      if (!isComplete && !isInProgress) return;
-
-      const moduleAnswers = {};
-      const maxM = isComplete ? 10 : 4;
-
-      for (let m = 1; m <= maxM; m++) {
-        moduleAnswers[`m${m}`] = {};
-        for (let q = 1; q <= 15; q++) {
-          const isText = (m === 10 && (q === 14 || q === 15));
-          if (!isText) {
-            const skip = Math.random() < 0.05;
-            moduleAnswers[`m${m}`][`m${m}q${q}`] = skip ? 'N/A' : randScore();
-          }
-        }
-      }
-
-      const textAnswers = {};
-      if (maxM >= 10) {
-        textAnswers['m10q14'] = sampleStrengths[Math.floor(Math.random() * sampleStrengths.length)];
-        textAnswers['m10q15'] = sampleImprovements[Math.floor(Math.random() * sampleImprovements.length)];
-      }
-
-      const managerAnswers = {};
-      if (evaluatee.isManager && maxM >= 10) {
-        for (let mq = 1; mq <= 10; mq++) {
-          managerAnswers[`mgr${mq}`] = randScore();
-        }
-      }
-
-      EVAL_DATA[key] = {
-        evaluatorId: evaluator.id,
-        evaluateeId: evaluatee.id,
-        cycleId: '2024-Q4',
-        status: isComplete ? 'completed' : 'in_progress',
-        completedAt: isComplete ? new Date(Date.now() - Math.random() * 6 * 86400000).toISOString() : null,
-        moduleAnswers,
-        textAnswers,
-        managerAnswers
-      };
-    });
-  });
-
-  saveEvalData();
 }
 
 // =========================================================

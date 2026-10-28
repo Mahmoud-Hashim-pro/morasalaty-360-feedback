@@ -831,49 +831,12 @@ async function loadData() {
     }
   } catch(e) {}
 
-  // If still no data, generate demo
+  // If no data, keep clean real state
   if (Object.keys(EVAL_DATA).length === 0) {
-    generateDemoData();
+    if (dbText) dbText.innerText = 'قاعدة البيانات جاهزة (في انتظار أول تقييم)';
   }
   updateResultsPanel();
   updateStats();
-}
-
-function generateDemoData() {
-  const weights = [0.05, 0.1, 0.15, 0.25, 0.25, 0.15, 0.05];
-  function randScore() {
-    const r = Math.random();
-    let cum = 0;
-    for (let i = 0; i < weights.length; i++) {
-      cum += weights[i];
-      if (r < cum) return i + 1 > 5 ? 5 : i + 1;
-    }
-    return 3;
-  }
-  EMPLOYEES.forEach(evaluator => {
-    EMPLOYEES.forEach(evaluatee => {
-      if (evaluator.id === evaluatee.id) return;
-      const key = `${evaluator.id}_${evaluatee.id}`;
-      const isComplete = Math.random() < 0.72;
-      if (!isComplete) return;
-      const moduleAnswers = {};
-      for (let m = 1; m <= 10; m++) {
-        moduleAnswers[`m${m}`] = {};
-        for (let q = 1; q <= 15; q++) {
-          const skip = Math.random() < 0.08;
-          moduleAnswers[`m${m}`][`m${m}q${q}`] = skip ? 'N/A' : randScore();
-        }
-      }
-      EVAL_DATA[key] = {
-        evaluatorId: evaluator.id,
-        evaluateeId: evaluatee.id,
-        cycleId: '2024-Q4',
-        status: 'completed',
-        completedAt: new Date(Date.now() - Math.random() * 7 * 24 * 3600000).toISOString(),
-        moduleAnswers,
-      };
-    });
-  });
 }
 
 // ==========================================
