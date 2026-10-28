@@ -142,11 +142,36 @@ async function runTests() {
       moduleAnswers: { m1: { q1: 5, q2: 5, q3: 4 } },
       textAnswers: { m1: 'تعاون ممتاز وتقييم اختباري للتأكد من الحفظ الفعلي' },
       managerAnswers: {},
+      nextTicketTried: 'yes',
+      nextTicketFeedback: 'تجربة ممتازة في إدارة التذاكر وخدمة العملاء',
       progressPct: 20
     });
     assert.strictEqual(saveRes.status, 200);
     assert.strictEqual(saveRes.data.ok, true);
-    console.log('   ✅ /api/evaluations/save draft passed!');
+    console.log('   ✅ /api/evaluations/save draft passed with Next Ticket response!');
+
+    // 6b. Submit Final Evaluation with Next Ticket
+    console.log('6️⃣b Testing /api/evaluations/submit final...');
+    const submitRes = await request({
+      hostname: 'localhost',
+      port: PORT,
+      path: '/api/evaluations/submit',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    }, {
+      evaluateeId: 2,
+      moduleAnswers: { m1: { q1: 5, q2: 5, q3: 5 } },
+      textAnswers: { m1: 'تقييم معتمد نهائي' },
+      managerAnswers: {},
+      nextTicketTried: 'yes',
+      nextTicketFeedback: 'ممتازة وسريعة في خدمة العملاء'
+    });
+    assert.strictEqual(submitRes.status, 200);
+    assert.strictEqual(submitRes.data.ok, true);
+    console.log('   ✅ /api/evaluations/submit passed with Next Ticket persisted!');
 
     // 7. Prevent self evaluation
     console.log('7️⃣ Testing prevention of self-evaluation...');
@@ -179,7 +204,9 @@ async function runTests() {
     assert.strictEqual(analyticsRes.data.summary.totalEmployees, 17);
     assert.strictEqual(analyticsRes.data.summary.totalExpectedEvaluations, 272);
     assert.strictEqual(analyticsRes.data.rankings.length, 17);
-    console.log(`   ✅ /api/analytics passed! Real expected evals: 272 (17 * 16), Rankings: 17 employees`);
+    assert.strictEqual(analyticsRes.data.nextTicketStats.yesCount, 1);
+    assert.strictEqual(analyticsRes.data.nextTicketStats.totalAnswered, 1);
+    console.log(`   ✅ /api/analytics passed! Next Ticket stats verified (yesCount: 1).`);
 
     console.log('\n🎉 ALL 8 INTEGRATION TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {

@@ -261,7 +261,8 @@ module.exports = async function handler(req, res) {
 
       // Fetch any existing evaluations made by this evaluator
       const myEvals = await sql`
-        SELECT id, evaluatee_id, status, progress_pct, module_answers, text_answers, manager_answers, updated_at, completed_at
+        SELECT id, evaluatee_id, status, progress_pct, module_answers, text_answers, manager_answers, 
+               next_ticket_tried, next_ticket_feedback, updated_at, completed_at
         FROM m360_evaluations
         WHERE evaluator_id = ${authUser.id} AND cycle_id = '2026-Q1';
       `;
@@ -281,6 +282,8 @@ module.exports = async function handler(req, res) {
           moduleAnswers: existing ? existing.module_answers : {},
           textAnswers: existing ? existing.text_answers : {},
           managerAnswers: existing ? existing.manager_answers : {},
+          nextTicketTried: existing ? existing.next_ticket_tried : null,
+          nextTicketFeedback: existing ? existing.next_ticket_feedback : null,
           updatedAt: existing ? existing.updated_at : null,
           completedAt: existing ? existing.completed_at : null
         };
@@ -306,7 +309,7 @@ module.exports = async function handler(req, res) {
         return sendJson(res, 401, { ok: false, error: 'غير مصرح بالدخول' });
       }
 
-      const { evaluateeId, moduleAnswers, textAnswers, managerAnswers, progressPct } = await parseBody(req);
+      const { evaluateeId, moduleAnswers, textAnswers, managerAnswers, progressPct, nextTicketTried, nextTicketFeedback } = await parseBody(req);
 
       if (!evaluateeId) {
         return sendJson(res, 400, { ok: false, error: 'معرّف الموظف المقيّم مطلوب' });
@@ -323,7 +326,7 @@ module.exports = async function handler(req, res) {
       await sql`
         INSERT INTO m360_evaluations (
           cycle_id, evaluator_id, evaluatee_id, status, progress_pct,
-          module_answers, text_answers, manager_answers, updated_at
+          module_answers, text_answers, manager_answers, next_ticket_tried, next_ticket_feedback, updated_at
         ) VALUES (
           ${cycleId},
           ${authUser.id},
@@ -333,6 +336,8 @@ module.exports = async function handler(req, res) {
           ${JSON.stringify(moduleAnswers || {})}::jsonb,
           ${JSON.stringify(textAnswers || {})}::jsonb,
           ${JSON.stringify(managerAnswers || {})}::jsonb,
+          ${nextTicketTried || null},
+          ${nextTicketFeedback || null},
           NOW()
         )
         ON CONFLICT (cycle_id, evaluator_id, evaluatee_id)
@@ -340,6 +345,8 @@ module.exports = async function handler(req, res) {
           module_answers = EXCLUDED.module_answers,
           text_answers = EXCLUDED.text_answers,
           manager_answers = EXCLUDED.manager_answers,
+          next_ticket_tried = COALESCE(EXCLUDED.next_ticket_tried, m360_evaluations.next_ticket_tried),
+          next_ticket_feedback = COALESCE(EXCLUDED.next_ticket_feedback, m360_evaluations.next_ticket_feedback),
           progress_pct = EXCLUDED.progress_pct,
           updated_at = NOW()
         WHERE m360_evaluations.status <> 'completed';
@@ -361,7 +368,7 @@ module.exports = async function handler(req, res) {
         return sendJson(res, 401, { ok: false, error: 'غير مصرح بالدخول' });
       }
 
-      const { evaluateeId, moduleAnswers, textAnswers, managerAnswers } = await parseBody(req);
+      const { evaluateeId, moduleAnswers, textAnswers, managerAnswers, nextTicketTried, nextTicketFeedback } = await parseBody(req);
 
       if (!evaluateeId) {
         return sendJson(res, 400, { ok: false, error: 'معرّف الموظف المقيّم مطلوب' });
@@ -377,7 +384,7 @@ module.exports = async function handler(req, res) {
       await sql`
         INSERT INTO m360_evaluations (
           cycle_id, evaluator_id, evaluatee_id, status, progress_pct,
-          module_answers, text_answers, manager_answers, completed_at, updated_at
+          module_answers, text_answers, manager_answers, next_ticket_tried, next_ticket_feedback, completed_at, updated_at
         ) VALUES (
           ${cycleId},
           ${authUser.id},
@@ -387,6 +394,8 @@ module.exports = async function handler(req, res) {
           ${JSON.stringify(moduleAnswers || {})}::jsonb,
           ${JSON.stringify(textAnswers || {})}::jsonb,
           ${JSON.stringify(managerAnswers || {})}::jsonb,
+          ${nextTicketTried || null},
+          ${nextTicketFeedback || null},
           NOW(),
           NOW()
         )
@@ -397,6 +406,8 @@ module.exports = async function handler(req, res) {
           module_answers = EXCLUDED.module_answers,
           text_answers = EXCLUDED.text_answers,
           manager_answers = EXCLUDED.manager_answers,
+          next_ticket_tried = COALESCE(EXCLUDED.next_ticket_tried, m360_evaluations.next_ticket_tried),
+          next_ticket_feedback = COALESCE(EXCLUDED.next_ticket_feedback, m360_evaluations.next_ticket_feedback),
           completed_at = NOW(),
           updated_at = NOW();
       `;
@@ -423,7 +434,9 @@ module.exports = async function handler(req, res) {
       // Fetch all evaluations
       const evaluations = await sql`
         SELECT id, cycle_id, evaluator_id, evaluatee_id, status, progress_pct,
-               module_answers, text_answers, manager_answers, created_at, updated_at, completed_at
+               module_answers, text_answers, manager_answers, 
+               next_ticket_tried, next_ticket_feedback,
+               created_at, updated_at, completed_at
         FROM m360_evaluations
         WHERE cycle_id = '2026-Q1';
       `;
@@ -546,6 +559,32 @@ module.exports = async function handler(req, res) {
         ? parseFloat((employeeRankings.filter(e => e.overallScore > 0).reduce((a, b) => a + b.overallScore, 0) / employeeRankings.filter(e => e.overallScore > 0).length).toFixed(2))
         : 0;
 
+      // Next Ticket Survey Stats
+      const nextTicketStats = {
+        totalAnswered: 0,
+        yesCount: 0,
+        noCount: 0,
+        yesPercent: 0,
+        feedbacks: []
+      };
+
+      evaluations.forEach(ev => {
+        if (ev.next_ticket_tried === 'yes') {
+          nextTicketStats.yesCount++;
+          nextTicketStats.totalAnswered++;
+          if (ev.next_ticket_feedback && typeof ev.next_ticket_feedback === 'string' && ev.next_ticket_feedback.trim()) {
+            nextTicketStats.feedbacks.push(ev.next_ticket_feedback.trim());
+          }
+        } else if (ev.next_ticket_tried === 'no') {
+          nextTicketStats.noCount++;
+          nextTicketStats.totalAnswered++;
+        }
+      });
+
+      if (nextTicketStats.totalAnswered > 0) {
+        nextTicketStats.yesPercent = Math.round((nextTicketStats.yesCount / nextTicketStats.totalAnswered) * 100);
+      }
+
       return sendJson(res, 200, {
         ok: true,
         summary: {
@@ -560,6 +599,7 @@ module.exports = async function handler(req, res) {
         companyModuleAverages,
         teamScores,
         rankings: employeeRankings,
+        nextTicketStats,
         rawEvaluations: evaluations
       });
     }
