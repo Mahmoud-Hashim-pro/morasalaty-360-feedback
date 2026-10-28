@@ -8,6 +8,18 @@ const TOKEN_KEY = 'm360_token';
 const STORAGE_KEY = 'morasalaty_360_data';
 const SESSION_USER_KEY = 'morasalaty_current_user';
 
+// Cache cleanup: Automatically purge any legacy mock/demo evaluations in localStorage
+(function purgeLegacyDemoCache() {
+  const CURRENT_DATA_VERSION = 'v2026_m360_clean_prod_v2';
+  try {
+    if (localStorage.getItem('m360_cache_version') !== CURRENT_DATA_VERSION) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('morasalaty_360_analysis_config');
+      localStorage.setItem('m360_cache_version', CURRENT_DATA_VERSION);
+    }
+  } catch(e) {}
+})();
+
 const TEAM_COLORS = {
   "Admin": "#4F46E5",
   "TS": "#0284C7",
@@ -113,9 +125,12 @@ async function loadEvalData() {
     if (raw) {
       const parsed = JSON.parse(raw);
       EVAL_DATA = parsed.evaluations || {};
+    } else {
+      EVAL_DATA = {};
     }
   } catch (e) {
     console.error("Error reading localStorage:", e);
+    EVAL_DATA = {};
   }
 
   // Pure real data sync with PostgreSQL server
@@ -127,7 +142,8 @@ async function loadRemoteEvaluations() {
   try {
     if (currentUser.isHRAdmin || currentUser.id === 0) {
       const res = await apiCall('/analytics');
-      if (res.ok && res.data && res.data.rawEvaluations) {
+      if (res.ok && res.data && Array.isArray(res.data.rawEvaluations)) {
+        EVAL_DATA = {}; // Reset before mapping authoritative data
         res.data.rawEvaluations.forEach(ev => {
           const key = `${ev.evaluator_id}_${ev.evaluatee_id}`;
           EVAL_DATA[key] = {
@@ -150,22 +166,25 @@ async function loadRemoteEvaluations() {
       }
     } else {
       const res = await apiCall('/evaluations');
-      if (res.ok && res.data && res.data.colleagues) {
+      if (res.ok && res.data && Array.isArray(res.data.colleagues)) {
+        EVAL_DATA = {}; // Reset before mapping authoritative data
         res.data.colleagues.forEach(col => {
-          const key = `${currentUser.id}_${col.employee.id}`;
-          EVAL_DATA[key] = {
-            id: col.evaluationId,
-            evaluatorId: currentUser.id,
-            evaluateeId: col.employee.id,
-            cycleId: '2026-Q1',
-            status: col.status,
-            progress: col.progressPct,
-            moduleAnswers: col.moduleAnswers || {},
-            textAnswers: col.textAnswers || {},
-            managerAnswers: col.managerAnswers || {},
-            completedAt: col.completedAt,
-            updatedAt: col.updatedAt
-          };
+          if (col.status && col.status !== 'not_started') {
+            const key = `${currentUser.id}_${col.employee.id}`;
+            EVAL_DATA[key] = {
+              id: col.evaluationId,
+              evaluatorId: currentUser.id,
+              evaluateeId: col.employee.id,
+              cycleId: '2026-Q1',
+              status: col.status,
+              progress: col.progressPct,
+              moduleAnswers: col.moduleAnswers || {},
+              textAnswers: col.textAnswers || {},
+              managerAnswers: col.managerAnswers || {},
+              completedAt: col.completedAt,
+              updatedAt: col.updatedAt
+            };
+          }
         });
         saveEvalData();
         updateCloudStatusBadge(true, 'متصل بالسحابة (مزامنة فورية)');

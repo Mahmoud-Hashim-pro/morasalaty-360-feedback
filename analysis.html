@@ -749,6 +749,18 @@ svg.radar-svg { overflow: visible; }
 
 <script src="data/employees.js"></script>
 <script>
+// Cache cleanup: Automatically purge any stale demo/mock data stored in browser localStorage
+(function purgeLegacyDemoCache() {
+  const CURRENT_DATA_VERSION = 'v2026_m360_clean_prod_v2';
+  try {
+    if (localStorage.getItem('m360_cache_version') !== CURRENT_DATA_VERSION) {
+      localStorage.removeItem('morasalaty_360_data');
+      localStorage.removeItem('morasalaty_360_analysis_config');
+      localStorage.setItem('m360_cache_version', CURRENT_DATA_VERSION);
+    }
+  } catch(e) {}
+})();
+
 // ==========================================
 // DATA - Synced from data/employees.js
 // ==========================================
@@ -785,7 +797,7 @@ let state = {
   analysisData: null,
 };
 
-// Load data from live PostgreSQL API OR fallback to local cache
+// Load data strictly from live PostgreSQL API (Authoritative source of truth)
 let EVAL_DATA = {};
 async function loadData() {
   const dbText = document.getElementById('live-db-text');
@@ -793,50 +805,48 @@ async function loadData() {
     const res = await fetch('/api/analytics');
     if (res.ok) {
       const data = await res.json();
-      if (data.ok && data.rawEvaluations && data.rawEvaluations.length > 0) {
+      if (data.ok && Array.isArray(data.rawEvaluations)) {
         EVAL_DATA = {};
-        data.rawEvaluations.forEach(ev => {
-          const key = `${ev.evaluator_id}_${ev.evaluatee_id}`;
-          EVAL_DATA[key] = {
-            id: ev.id,
-            evaluatorId: ev.evaluator_id,
-            evaluateeId: ev.evaluatee_id,
-            cycleId: ev.cycle_id,
-            status: ev.status,
-            progressPct: ev.progress_pct,
-            completedAt: ev.completed_at,
-            updatedAt: ev.updated_at,
-            moduleAnswers: ev.module_answers || {},
-            textAnswers: ev.text_answers || {},
-            managerAnswers: ev.manager_answers || {}
-          };
-        });
-        if (dbText) dbText.innerText = `قاعدة بيانات حية (${data.rawEvaluations.length} تقييماً)`;
+        if (data.rawEvaluations.length > 0) {
+          data.rawEvaluations.forEach(ev => {
+            const key = `${ev.evaluator_id}_${ev.evaluatee_id}`;
+            EVAL_DATA[key] = {
+              id: ev.id,
+              evaluatorId: ev.evaluator_id,
+              evaluateeId: ev.evaluatee_id,
+              cycleId: ev.cycle_id,
+              status: ev.status,
+              progressPct: ev.progress_pct,
+              completedAt: ev.completed_at,
+              updatedAt: ev.updated_at,
+              moduleAnswers: ev.module_answers || {},
+              textAnswers: ev.text_answers || {},
+              managerAnswers: ev.manager_answers || {}
+            };
+          });
+          if (dbText) dbText.innerText = `قاعدة بيانات حية (${data.rawEvaluations.length} تقييماً)`;
+        } else {
+          // Live PostgreSQL is 100% clean & zeroed out
+          // Permanently purge any stale demo data from localStorage
+          localStorage.removeItem('morasalaty_360_data');
+          if (dbText) dbText.innerText = 'قاعدة البيانات حية ومصفرة (في انتظار التقييمات)';
+        }
         updateResultsPanel();
         updateStats();
+        generateInsights();
         return;
       }
     }
   } catch(e) {
-    console.warn("Could not fetch /api/analytics, using local cache:", e);
-    if (dbText) dbText.innerText = 'وضع عدم الاتصال (بيانات محلية)';
+    console.warn("Could not fetch /api/analytics:", e);
+    if (dbText) dbText.innerText = 'وضع غير متصل بالخادم';
   }
 
-  // Fallback to localStorage
-  try {
-    const stored = localStorage.getItem('morasalaty_360_data');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      EVAL_DATA = parsed.evaluations || {};
-    }
-  } catch(e) {}
-
-  // If no data, keep clean real state
-  if (Object.keys(EVAL_DATA).length === 0) {
-    if (dbText) dbText.innerText = 'قاعدة البيانات جاهزة (في انتظار أول تقييم)';
-  }
+  // Never fall back to stale demo evaluations
+  EVAL_DATA = {};
   updateResultsPanel();
   updateStats();
+  generateInsights();
 }
 
 // ==========================================
@@ -1480,7 +1490,18 @@ function generateInsights() {
     return s ? { ...e, avg: s.avg, count: s.count } : null;
   }).filter(Boolean).sort((a, b) => b.avg - a.avg);
 
-  if (scores.length === 0) { section.innerHTML = ''; return; }
+  if (scores.length === 0) {
+    section.innerHTML = `
+      <div style="text-align:center;padding:28px 20px;color:#64748B;background:white;border-radius:12px;border:1px dashed #CBD5E1;margin-top:16px;">
+        <div style="font-size:2.2rem;margin-bottom:8px;">⏳</div>
+        <div style="font-weight:700;font-size:1.05rem;margin-bottom:6px;color:#1E293B;">في انتظار بدء التقييمات الفعلية</div>
+        <div style="font-size:0.85rem;color:#64748B;max-width:560px;margin:0 auto;line-height:1.6;">
+          قاعدة البيانات متصلة ومصفّرة تماماً (0 تقييمات مكتملة). بمجرد أن يقوم الموظفون بالدخول وتقييم زملائهم، ستظهر هنا التحليلات الإحصائية، ونقاط القوة والتحسين، ومعدلات الإنجاز ومقارنات الفرق تلقائياً وبشكل فوري.
+        </div>
+      </div>
+    `;
+    return;
+  }
 
   const topPerformer = scores[0];
   const lowest = scores[scores.length - 1];
