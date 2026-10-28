@@ -283,6 +283,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <button class="topbar-btn" onclick="doLogout()">خروج</button>
     </div>
   </div>
+  <!-- Admin Preview Mode Banner -->
+  <div id="admin-preview-banner" style="display:none;background:#FEF3C7;border-bottom:1px solid #FCD34D;color:#92400E;padding:12px 24px;font-size:0.88rem;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:1.2rem;">👔</span>
+      <strong>واجهة تقييم الزملاء (معاينة الإدارة):</strong>
+      <span>أنت تشاهد الآن التقييم من حساب الموظف:</span>
+      <select id="preview-employee-select" onchange="changePreviewEmployee(this.value)" style="padding:6px 12px;border-radius:6px;border:1px solid #D97706;font-weight:700;background:white;color:#1E293B;font-size:0.9rem;cursor:pointer;">
+        <!-- Filled with 17 employees -->
+      </select>
+      <span style="font-size:0.78rem;background:#FDE68A;color:#78350F;padding:3px 10px;border-radius:100px;font-weight:700;">يظهر أمامه 16 زميلاً فقط (مستثنى نفسه تلقائياً)</span>
+    </div>
+    <button class="btn btn-sm btn-outline" style="background:white;font-weight:700;" onclick="returnToAdminDashboard()">← العودة للوحة تحكم الإدارة</button>
+  </div>
   <div class="dash-header">
     <div class="dash-welcome" id="dash-welcome"></div>
     <div class="dash-sub">قيّم زملاءك بموضوعية — التقييمات سرية ومحمية</div>
@@ -357,6 +370,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <span style="display:inline-block;width:7px;height:7px;background:#34D399;border-radius:50%;box-shadow:0 0 6px #34D399;"></span>
         <span id="hr-cloud-status-text">متصل بالسحابة (Neon DB)</span>
       </div>
+      <button class="topbar-btn" style="background:#4338CA;border:1px solid #818CF8;font-weight:700;" onclick="switchToEmployeeView()">👥 تجربة واجهة تقييم الزملاء</button>
       <button class="topbar-btn" onclick="openAnalysis()">📊 محرك التحليل</button>
       <button class="topbar-btn" onclick="doLogout()">خروج</button>
     </div>
@@ -366,6 +380,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <div style="font-size:.72rem;font-weight:700;color:var(--text-light);padding:8px 12px;text-transform:uppercase;letter-spacing:.05em;">القائمة الرئيسية</div>
       <div class="hr-nav-item active" onclick="hrNav('overview',this)"><span class="hr-nav-icon">🏠</span>نظرة عامة</div>
       <div class="hr-nav-item" onclick="hrNav('completion',this)"><span class="hr-nav-icon">✅</span>متابعة الإكمال</div>
+      <div class="hr-nav-item" onclick="switchToEmployeeView()" style="background:#EEF2FF;color:#4338CA;font-weight:700;margin:4px 0;"><span class="hr-nav-icon">👥</span>واجهة تقييم الزملاء (الموظف)</div>
       <div class="hr-nav-item" onclick="hrNav('employees',this)"><span class="hr-nav-icon">👥</span>تقارير الموظفين</div>
       <div class="hr-nav-item" onclick="hrNav('teams',this)"><span class="hr-nav-icon">🏢</span>تقارير الفرق</div>
       <div class="hr-nav-item" onclick="hrNav('modules',this)"><span class="hr-nav-icon">📋</span>تحليل الوحدات</div>

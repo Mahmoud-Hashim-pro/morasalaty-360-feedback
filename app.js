@@ -414,6 +414,7 @@ async function doLogin() {
 }
 
 async function doLogout() {
+  realAdminUser = null;
   try {
     await apiCall('/auth/logout', 'POST');
   } catch (e) {}
@@ -446,8 +447,58 @@ function getColleagueEvalStatus(evaluatorId, colleagueId) {
   };
 }
 
+let realAdminUser = null;
+
+function switchToEmployeeView(empId = 1) {
+  if (currentUser && (currentUser.isHRAdmin || currentUser.email === 'mahmoud@tieapps.com' || currentUser.id === 0 || currentUser.id === 99)) {
+    realAdminUser = currentUser;
+  }
+  const emp = EMPLOYEES.find(e => e.id === parseInt(empId, 10)) || EMPLOYEES[0];
+  currentUser = emp;
+  showScreen('screen-dashboard');
+  renderEmployeeDashboard();
+}
+
+function changePreviewEmployee(empId) {
+  switchToEmployeeView(empId);
+}
+
+function returnToAdminDashboard() {
+  if (realAdminUser) {
+    currentUser = realAdminUser;
+    realAdminUser = null;
+  } else {
+    currentUser = typeof SUPER_ADMIN !== 'undefined' ? SUPER_ADMIN : {
+      id: 99,
+      name: "محمود هاشم",
+      email: "mahmoud@tieapps.com",
+      role: "مالك المنصة والمدير العام",
+      team: "Admin",
+      isHRAdmin: true,
+      isManager: true
+    };
+  }
+  showScreen('screen-hr');
+  renderHrDashboard();
+}
+
 function renderEmployeeDashboard() {
   if (!currentUser) return;
+
+  const banner = document.getElementById('admin-preview-banner');
+  if (banner) {
+    if (realAdminUser) {
+      banner.style.display = 'flex';
+      const select = document.getElementById('preview-employee-select');
+      if (select) {
+        select.innerHTML = EMPLOYEES.map(e => 
+          `<option value="${e.id}" ${e.id === currentUser.id ? 'selected' : ''}>${e.name} — ${e.role}</option>`
+        ).join('');
+      }
+    } else {
+      banner.style.display = 'none';
+    }
+  }
 
   const avatar = document.getElementById('topbar-avatar');
   const name = document.getElementById('topbar-name');
