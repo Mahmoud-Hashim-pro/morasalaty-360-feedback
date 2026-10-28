@@ -2,7 +2,9 @@ const { neon } = require('@neondatabase/serverless');
 const { EMPLOYEES, DEMO_PASSWORDS, UNIFORM_PASSWORD, HR_ADMIN, SUPER_ADMIN } = require('../data/employees');
 const crypto = require('crypto');
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_AMyt3kIFUh0O@ep-misty-wave-baad1xpc-pooler.c-8.eu-central-1.aws.neon.tech/neondb?sslmode=require';
+const connectionString = process.env.DATABASE_URL || 
+  process.env.POSTGRES_URL || 
+  'postgresql://neondb_owner:npg_xtSXwcfe25Ji@ep-crimson-grass-b5li0j4g-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
 const sql = neon(connectionString);
 
 function hashPassword(pwd) {
