@@ -254,28 +254,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <h1>مراسلاتي 360°</h1>
       <p>نظام التقييم المتبادل الشامل للموظفين</p>
     </div>
-    <div class="login-hint">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-        <strong>💡 الدخول السريع (انقر لتعبئة الحساب):</strong>
-        <span style="font-size:0.75rem;background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;padding:2px 8px;border-radius:100px;font-weight:700;">كلمة المرور الموحدة: mora123</span>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        <button type="button" class="btn btn-sm btn-outline" style="font-size:0.75rem;padding:4px 9px;background:#FEF3C7;border-color:#F59E0B;color:#92400E;font-weight:700;" onclick="fillLogin('mahmoud@tieapps.com', 'mora123')">👑 صاحب المنصة: محمود هاشم (mahmoud@tieapps.com)</button>
-        <button type="button" class="btn btn-sm btn-outline" style="font-size:0.75rem;padding:3px 8px;" onclick="fillLogin('mahmoud.hashim@samaagroup.net', 'mora123')">👔 محمود هاشم (Admin)</button>
-        <button type="button" class="btn btn-sm btn-outline" style="font-size:0.75rem;padding:3px 8px;" onclick="fillLogin('a.taha@samaagroup.net', 'mora123')">👨‍💼 احمد طه (Sales)</button>
-        <button type="button" class="btn btn-sm btn-outline" style="font-size:0.75rem;padding:3px 8px;" onclick="fillLogin('hazem.khaled@samaagroup.net', 'mora123')">🔧 حازم خالد (TS)</button>
-        <button type="button" class="btn btn-sm btn-outline" style="font-size:0.75rem;padding:3px 8px;" onclick="fillLogin('salma.essam@samaagroup.net', 'mora123')">👩‍💼 سلمى عصام (TS)</button>
-        <button type="button" class="btn btn-sm btn-outline" style="font-size:0.75rem;padding:3px 8px;" onclick="fillLogin('hr.admin@samaagroup.net', 'mora123')">📊 مدير الموارد البشرية (HR)</button>
-      </div>
-    </div>
     <div class="form-group">
       <label>البريد الإلكتروني الوظيفي</label>
-      <input type="email" id="login-email" placeholder="yourname@samaagroup.net" autocomplete="email">
+      <input type="email" id="login-email" placeholder="yourname@samaagroup.net" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
       <div class="form-error" id="err-email"></div>
     </div>
     <div class="form-group">
       <label>كلمة المرور</label>
-      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
       <div class="form-error" id="err-pass"></div>
     </div>
     <button class="btn btn-primary btn-lg" style="width:100%;" onclick="doLogin()">تسجيل الدخول ←</button>
