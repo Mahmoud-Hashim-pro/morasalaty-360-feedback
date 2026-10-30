@@ -276,6 +276,7 @@ module.exports = async function handler(req, res) {
 
       const colleagueTasks = colleagues.map(c => {
         const existing = evalMap[c.id];
+        const isCompleted = existing && existing.status === 'completed';
         const ntTried = existing ? existing.next_one_tried : null;
         const ntFeedback = existing ? existing.next_one_feedback : null;
         return {
@@ -283,13 +284,14 @@ module.exports = async function handler(req, res) {
           evaluationId: existing ? existing.id : null,
           status: existing ? existing.status : 'not_started',
           progressPct: existing ? (existing.progress_pct || 0) : 0,
-          moduleAnswers: existing ? existing.module_answers : {},
-          textAnswers: existing ? existing.text_answers : {},
-          managerAnswers: existing ? existing.manager_answers : {},
-          nextOneTried: ntTried,
-          nextOneFeedback: ntFeedback,
-          nextTicketTried: ntTried,
-          nextTicketFeedback: ntFeedback,
+          // Strict Confidentiality: Once completed, wipe all answers so they cannot be retrieved or inspected by anyone
+          moduleAnswers: isCompleted ? {} : (existing ? (existing.module_answers || {}) : {}),
+          textAnswers: isCompleted ? {} : (existing ? (existing.text_answers || {}) : {}),
+          managerAnswers: isCompleted ? {} : (existing ? (existing.manager_answers || {}) : {}),
+          nextOneTried: isCompleted ? null : ntTried,
+          nextOneFeedback: isCompleted ? null : ntFeedback,
+          nextTicketTried: isCompleted ? null : ntTried,
+          nextTicketFeedback: isCompleted ? null : ntFeedback,
           updatedAt: existing ? existing.updated_at : null,
           completedAt: existing ? existing.completed_at : null
         };
@@ -330,6 +332,16 @@ module.exports = async function handler(req, res) {
       }
 
       const cycleId = '2026-Q1';
+
+      // Check if already completed
+      const checkSaveExisting = await sql`
+        SELECT status FROM m360_evaluations 
+        WHERE cycle_id = ${cycleId} AND evaluator_id = ${authUser.id} AND evaluatee_id = ${evaluateeId};
+      `;
+      if (checkSaveExisting.length > 0 && checkSaveExisting[0].status === 'completed') {
+        return sendJson(res, 403, { ok: false, error: 'هذا التقييم تم اعتماده مسبقاً ومغلق بسرية تامة ولا يمكن تعديله.' });
+      }
+
       const calcProgress = typeof progressPct === 'number' ? progressPct : 50;
 
       await sql`
@@ -398,6 +410,15 @@ module.exports = async function handler(req, res) {
 
       const cycleId = '2026-Q1';
 
+      // Check if already completed
+      const checkSubmitExisting = await sql`
+        SELECT status FROM m360_evaluations 
+        WHERE cycle_id = ${cycleId} AND evaluator_id = ${authUser.id} AND evaluatee_id = ${evaluateeId};
+      `;
+      if (checkSubmitExisting.length > 0 && checkSubmitExisting[0].status === 'completed') {
+        return sendJson(res, 403, { ok: false, error: 'هذا التقييم تم إرساله واعتماده مسبقاً ومغلق بسرية تامة.' });
+      }
+
       await sql`
         INSERT INTO m360_evaluations (
           cycle_id, evaluator_id, evaluatee_id, status, progress_pct,
@@ -445,6 +466,14 @@ module.exports = async function handler(req, res) {
     // 9. Analytics: Aggregated metrics & raw data for Drag-and-Drop
     // -------------------------------------------------------------------------
     if ((pathname === '/analytics' || pathname === '/analytics/') && req.method === 'GET') {
+      const authUser = await authenticateRequest(req, sql);
+      if (!authUser) {
+        return sendJson(res, 401, { ok: false, error: 'يجب تسجيل الدخول أولاً للوصول إلى لوحة التحليلات' });
+      }
+      if (!authUser.isHRAdmin) {
+        return sendJson(res, 403, { ok: false, error: 'غير مصرح بالوصول: لوحة التحليلات والنتائج سرية ومخصصة لإدارة الموارد البشرية والمديرين فقط' });
+      }
+
       // Fetch all employees
       const employees = await sql`
         SELECT id, name, email, role, team, is_manager as "isManager", manager_id as "managerId", channels
@@ -466,7 +495,7 @@ module.exports = async function handler(req, res) {
 
       const completedEvals = evaluations.filter(e => e.status === 'completed');
 
-      // Compute statistics per employee
+      // Compute statistics per employee for 8 core modules
       const employeeStats = {};
       employees.forEach(emp => {
         employeeStats[emp.id] = {
@@ -475,8 +504,8 @@ module.exports = async function handler(req, res) {
           receivedCompleted: 0,
           submittedTotal: 0,
           submittedCompleted: 0,
-          moduleAverages: { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 0, m8: 0, m9: 0, m10: 0 },
-          moduleCounts: { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 0, m8: 0, m9: 0, m10: 0 },
+          moduleAverages: { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 0, m8: 0 },
+          moduleCounts: { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 0, m8: 0 },
           overallScore: 0,
           comments: []
         };
@@ -494,9 +523,9 @@ module.exports = async function handler(req, res) {
           if (ev.status === 'completed') {
             employeeStats[ev.evaluatee_id].receivedCompleted++;
 
-            // Aggregate module answers
+            // Aggregate module answers across 8 modules
             const mAnswers = ev.module_answers || {};
-            for (let m = 1; m <= 10; m++) {
+            for (let m = 1; m <= 8; m++) {
               const mKey = `m${m}`;
               const qObj = mAnswers[mKey] || {};
               const scores = Object.values(qObj).map(v => parseFloat(v)).filter(v => !isNaN(v) && v > 0);
@@ -523,7 +552,7 @@ module.exports = async function handler(req, res) {
         let totalModScore = 0;
         let activeModCount = 0;
 
-        for (let m = 1; m <= 10; m++) {
+        for (let m = 1; m <= 8; m++) {
           const mKey = `m${m}`;
           const count = item.moduleCounts[mKey];
           if (count > 0) {
@@ -543,9 +572,9 @@ module.exports = async function handler(req, res) {
       // Sort by overall score descending
       employeeRankings.sort((a, b) => b.overallScore - a.overallScore);
 
-      // Company-wide module averages
+      // Company-wide module averages for 8 modules
       const companyModuleAverages = {};
-      for (let m = 1; m <= 10; m++) {
+      for (let m = 1; m <= 8; m++) {
         const mKey = `m${m}`;
         const scoredEmps = employeeRankings.filter(e => e.moduleAverages[mKey] > 0);
         if (scoredEmps.length > 0) {

@@ -441,18 +441,18 @@ function getColleagueEvalStatus(evaluatorId, colleagueId) {
   const key = `${evaluatorId}_${colleagueId}`;
   const ev = EVAL_DATA[key];
   if (!ev) return { status: 'not_started', progress: 0, completedModules: 0 };
-  if (ev.status === 'completed') return { status: 'completed', progress: 100, completedModules: 10 };
+  if (ev.status === 'completed') return { status: 'completed', progress: 100, completedModules: MODULES.length };
 
   let completedModules = 0;
-  for (let m = 1; m <= 10; m++) {
+  for (let m = 1; m <= MODULES.length; m++) {
     const modAnswers = ev.moduleAnswers?.[`m${m}`];
-    if (modAnswers && Object.keys(modAnswers).length >= 10) {
+    if (modAnswers && (modAnswers[`m${m}q1`] !== undefined || modAnswers['q1'] !== undefined || Object.keys(modAnswers).length >= 1)) {
       completedModules++;
     }
   }
   return {
     status: completedModules > 0 ? 'in_progress' : 'not_started',
-    progress: Math.round((completedModules / 10) * 100),
+    progress: Math.round((completedModules / MODULES.length) * 100),
     completedModules
   };
 }
@@ -588,7 +588,7 @@ function renderColleaguesGrid() {
     let cardStatusClass = 'not-started';
     if (s.status === 'completed') {
       badgeClass = 'badge-completed';
-      badgeText = 'مكتمل ✓';
+      badgeText = 'مكتمل ومغلق بسرية ✓';
       cardStatusClass = 'completed';
     } else if (s.status === 'in_progress') {
       badgeClass = 'badge-in-progress';
@@ -596,11 +596,11 @@ function renderColleaguesGrid() {
       cardStatusClass = 'in-progress';
     }
 
-    const actionText = s.status === 'completed' ? 'مراجعة التقييم' : (s.status === 'in_progress' ? 'استكمال التقييم' : 'بدء التقييم');
+    const actionText = s.status === 'completed' ? '🔒 معتمد ومغلق' : (s.status === 'in_progress' ? 'استكمال التقييم ←' : 'بدء التقييم ←');
     const actionBtnClass = s.status === 'completed' ? 'btn-ghost' : 'btn-primary';
 
     return `
-      <div class="colleague-card ${cardStatusClass}" onclick="startSurvey(${peer.id})">
+      <div class="colleague-card ${cardStatusClass}" onclick="handleColleagueCardClick(${peer.id})">
         <div class="colleague-header">
           <div class="colleague-avatar" style="background:${color};">${initials}</div>
           <div class="colleague-info">
@@ -619,37 +619,53 @@ function renderColleaguesGrid() {
           <div class="progress-bar">
             <div class="progress-fill" style="width:${s.progress}%; background:${s.status === 'completed' ? 'var(--success)' : (s.status === 'in_progress' ? 'var(--warning)' : 'var(--primary)')};"></div>
           </div>
-          <span class="progress-text">${s.completedModules} / 10 وحدات (${s.progress}%)</span>
+          <span class="progress-text">${s.completedModules} / ${MODULES.length} معايير (${s.progress}%)</span>
         </div>
 
         <div style="margin-top:14px;display:flex;justify-content:flex-end;">
-          <span class="btn ${actionBtnClass} btn-sm" style="pointer-events:none;">${actionText} ←</span>
+          <span class="btn ${actionBtnClass} btn-sm" style="pointer-events:none;">${actionText}</span>
         </div>
       </div>
     `;
   }).join('');
 }
 
+function handleColleagueCardClick(peerId) {
+  const peer = EMPLOYEES.find(e => e.id === peerId);
+  if (!peer || !currentUser) return;
+
+  const key = `${currentUser.id}_${peerId}`;
+  const ev = EVAL_DATA[key];
+  if (ev && ev.status === 'completed') {
+    showCompletedConfidentialModal(peer.name);
+    return;
+  }
+  startSurvey(peerId);
+}
+
+function showCompletedConfidentialModal(name) {
+  const body = `
+    <div style="text-align:center;padding:20px 10px;">
+      <div style="width:70px;height:70px;border-radius:20px;background:#ECFDF5;border:2px solid #A7F3D0;display:flex;align-items:center;justify-content:center;font-size:2.5rem;margin:0 auto 16px auto;box-shadow:0 6px 16px rgba(16,185,129,0.15);">🔒</div>
+      <h3 style="color:#065F46;margin-bottom:10px;font-weight:800;font-size:1.25rem;">التقييم مكتمل ومغلق بسرية تامة</h3>
+      <p style="font-size:0.92rem;color:#374151;line-height:1.7;margin-bottom:16px;">
+        لقد قمت باعتماد وإرسال تقييمك لزميلك <strong>${name}</strong> بنجاح وتوثيقه في السحابة.
+      </p>
+      <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:14px;font-size:0.86rem;color:#166534;line-height:1.7;margin-bottom:22px;text-align:right;">
+        🛡️ <strong>معايير السرية التامة:</strong><br>
+        حرصاً على أعلى درجات النزاهة والمصداقية والخصوصية لمنظومة تقييم 360 درجة، تم قفل الاستبيان نهائياً فور اعتماده، ولا يمكن لأي موظف الاطلاع على إجاباته السابقة أو تعديلها، كما لا يمكن لأي موظف معرفة تقييمات الآخرين له.
+      </div>
+      <button class="btn btn-primary" onclick="closeModal()" style="padding:10px 30px;font-weight:700;font-size:0.95rem;">فهمت، العودة للقائمة</button>
+    </div>
+  `;
+  openModal('التقييم مكتمل ومغلق بسرية', body, '');
+}
+
 // =========================================================
-// Survey Flow (Quick & Detailed Modes)
+// Survey Flow (Unified 8 Smart Composite Questions)
 // =========================================================
 function setSurveyMode(mode) {
-  currentSurvey.mode = mode;
-  const btnQuick = document.getElementById('btn-mode-quick');
-  const btnDetailed = document.getElementById('btn-mode-detailed');
-
-  if (mode === 'quick') {
-    btnQuick.style.background = 'white';
-    btnQuick.style.color = 'var(--primary)';
-    btnDetailed.style.background = 'transparent';
-    btnDetailed.style.color = 'white';
-  } else {
-    btnDetailed.style.background = 'white';
-    btnDetailed.style.color = 'var(--primary)';
-    btnQuick.style.background = 'transparent';
-    btnQuick.style.color = 'white';
-  }
-
+  // Mode toggle preserved for compatibility
   renderSurvey();
 }
 
@@ -663,15 +679,22 @@ function startSurvey(evaluateeId) {
   const evaluatee = EMPLOYEES.find(e => e.id === evaluateeId);
   if (!evaluatee) return;
 
+  const key = `${currentUser.id}_${evaluateeId}`;
+  const existing = EVAL_DATA[key];
+  if (existing && existing.status === 'completed') {
+    showCompletedConfidentialModal(evaluatee.name);
+    return;
+  }
+
   currentSurvey.evaluateeId = evaluateeId;
+  currentSurvey.page = 1;
   currentSurvey.moduleIndex = 0;
 
-  const key = `${currentUser.id}_${evaluateeId}`;
   if (!EVAL_DATA[key]) {
     EVAL_DATA[key] = {
       evaluatorId: currentUser.id,
       evaluateeId,
-      cycleId: '2024-Q4',
+      cycleId: '2026-Q1',
       status: 'in_progress',
       moduleAnswers: {},
       textAnswers: {},
@@ -781,331 +804,296 @@ function renderSurvey() {
   const key = `${currentUser.id}_${evaluatee.id}`;
   const ev = EVAL_DATA[key] || { moduleAnswers: {}, textAnswers: {}, managerAnswers: {} };
   const rel = getRelationship(currentUser, evaluatee);
+  if (!currentSurvey.page) currentSurvey.page = 1;
 
-  // Topbar Title
-  document.getElementById('survey-topbar-name').innerText = evaluatee.name;
-
-  // Sidebar Profile Card
+  // Sidebar Avatar & Profile
   const sAvatar = document.getElementById('survey-avatar');
-  sAvatar.innerText = getInitials(evaluatee.name);
-  sAvatar.style.background = getEmployeeColor(evaluatee);
-  document.getElementById('survey-name').innerText = evaluatee.name;
-  document.getElementById('survey-role').innerHTML = `
-    <div>${evaluatee.role} · ${evaluatee.team}</div>
-    <div style="margin-top:6px;"><span class="badge-rel ${rel.badgeClass}">${rel.label}</span></div>
-  `;
-
-  // Count done modules
-  let doneModulesCount = 0;
-  for (let m = 1; m <= 10; m++) {
-    const modAns = ev.moduleAnswers?.[`m${m}`];
-    if (modAns && Object.keys(modAns).length >= 10) doneModulesCount++;
+  if (sAvatar) {
+    sAvatar.innerText = getInitials(evaluatee.name);
   }
-  document.getElementById('sidebar-progress-label').innerText = `تم إنجاز ${doneModulesCount} من 10 وحدات (${Math.round((doneModulesCount / 10) * 100)}%)`;
+  const sName = document.getElementById('survey-name');
+  if (sName) sName.innerText = evaluatee.name;
+  const sRole = document.getElementById('survey-role');
+  if (sRole) sRole.innerText = `${evaluatee.role} · ${evaluatee.team}`;
+  const sRel = document.getElementById('survey-rel-tag');
+  if (sRel) sRel.innerHTML = `<span class="badge-rel ${rel.badgeClass}">${rel.label}</span>`;
 
-  // Sidebar modules
+  // Count done questions
+  let doneCount = 0;
+  for (let m = 1; m <= MODULES.length; m++) {
+    const modAns = ev.moduleAnswers?.['m' + m];
+    if (modAns && (modAns['m' + m + 'q1'] !== undefined || modAns['q1'] !== undefined || Object.keys(modAns).length >= 1)) {
+      doneCount++;
+    }
+  }
+  const pct = Math.round((doneCount / MODULES.length) * 100);
+
+  // Top Header Progress & Text (Matching screenshot)
+  const progText = document.getElementById('survey-progress-text');
+  if (progText) {
+    progText.innerText = `${pct}% مكتمل | السؤال ${doneCount} من ${MODULES.length}`;
+  }
+  const progFill = document.getElementById('survey-progress-fill');
+  if (progFill) {
+    progFill.style.width = `${pct}%`;
+  }
+  const doneBadge = document.getElementById('sidebar-done-badge');
+  if (doneBadge) {
+    doneBadge.innerText = `${doneCount} / ${MODULES.length}`;
+  }
+
+  // Sidebar Modules List (Matching screenshot)
   const sbModules = document.getElementById('sidebar-modules');
-  sbModules.innerHTML = MODULES.map((m, idx) => {
-    const isActive = (currentSurvey.mode === 'detailed' && idx === currentSurvey.moduleIndex);
-    const modAns = ev.moduleAnswers?.[`m${m.id}`];
-    const isDone = modAns && Object.keys(modAns).length >= 10;
-    return `
-      <div class="sidebar-module ${isActive ? 'active' : ''} ${isDone ? 'done' : ''}" onclick="selectModule(${idx})">
-        <span class="sidebar-module-icon" style="background:${m.color}15;color:${m.color};">${m.icon}</span>
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.id}. ${m.title}</span>
-        ${isDone ? '<span class="sidebar-module-check">✓</span>' : ''}
-      </div>
-    `;
-  }).join('');
+  if (sbModules) {
+    sbModules.innerHTML = MODULES.map(m => {
+      const modAns = ev.moduleAnswers?.['m' + m.id];
+      const isDone = modAns && (modAns['m' + m.id + 'q1'] !== undefined || modAns['q1'] !== undefined || Object.keys(modAns).length >= 1);
+      const isCurrentPage = (currentSurvey.page === 1 && m.id <= 4) || (currentSurvey.page === 2 && m.id > 4);
+      return `
+        <div class="sidebar-item ${isCurrentPage ? 'active' : ''} ${isDone ? 'done' : ''}" onclick="goToSurveyQuestion(${m.id})">
+          <div class="sidebar-item-content">
+            <span class="sidebar-item-icon">${m.icon}</span>
+            <span title="${m.title}">${m.id}. ${m.shortTitle || m.title}</span>
+          </div>
+          <span class="sidebar-item-status">${isDone ? '✓' : ''}</span>
+        </div>
+      `;
+    }).join('');
+  }
 
   const mainContainer = document.getElementById('survey-main');
   const firstName = evaluatee.name.split(' ')[0];
 
-  // ==========================================
-  // Render Branch: QUICK MODE vs DETAILED MODE
-  // ==========================================
-  if (currentSurvey.mode === 'quick') {
-    renderQuickSurvey(mainContainer, evaluatee, ev, firstName, rel);
-  } else {
-    renderDetailedSurvey(mainContainer, evaluatee, ev, firstName, rel);
-  }
+  renderUnifiedSurvey(mainContainer, evaluatee, ev, firstName, rel, doneCount, pct);
 }
 
-// 1. Detailed Survey View (15 Questions per Module)
-function renderDetailedSurvey(container, evaluatee, ev, firstName, rel) {
-  const currentMod = MODULES[currentSurvey.moduleIndex];
-  const modAnswers = ev.moduleAnswers?.[`m${currentMod.id}`] || {};
-
-  const answeredInThisMod = Object.keys(modAnswers).length;
-  const totalInThisMod = currentMod.questions.length;
-  const modProgressPercent = Math.round((answeredInThisMod / totalInThisMod) * 100);
-
-  const questionsHtml = currentMod.questions.map((q, qIdx) => {
-    const qText = q.text.replace(/\{name\}/g, `<span class="emp-name">${firstName}</span>`);
-    const currentVal = modAnswers[q.id];
-    const isAnswered = currentVal !== undefined && currentVal !== null;
-
-    if (q.type === 'text') {
-      const textVal = ev.textAnswers?.[q.id] || '';
-      return `
-        <div class="question-card ${textVal ? 'answered' : ''}">
-          <div class="question-num">السؤال ${qIdx + 1} من ${totalInThisMod} ${q.optional ? '<span class="optional-badge">ملاحظات نوعية اختيارية</span>' : ''}</div>
-          <div class="question-text">${qText}</div>
-          <textarea class="text-answer" placeholder="اكتب ملاحظاتك المهنية بموضوعية وصراحة بناءة..." oninput="handleTextAnswer('${q.id}', this.value)">${textVal}</textarea>
-        </div>
-      `;
+function goToSurveyQuestion(id) {
+  if (id <= 4) {
+    currentSurvey.page = 1;
+  } else {
+    currentSurvey.page = 2;
+  }
+  renderSurvey();
+  setTimeout(() => {
+    const el = document.getElementById(`survey-question-${id}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('q-highlight');
+      setTimeout(() => el.classList.remove('q-highlight'), 1200);
     }
+  }, 100);
+}
+const scrollToQuestion = goToSurveyQuestion;
 
-    const optionsHtml = SCALE_OPTIONS.map(opt => {
-      const isChecked = currentVal === opt.value;
-      const isNA = opt.value === 'N/A';
+function nextSurveyPage() {
+  currentSurvey.page = 2;
+  renderSurvey();
+  const scrollArea = document.querySelector('.survey-cards-scroll') || window;
+  scrollArea.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function prevSurveyPage() {
+  currentSurvey.page = 1;
+  renderSurvey();
+  const scrollArea = document.querySelector('.survey-cards-scroll') || window;
+  scrollArea.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderUnifiedSurvey(container, evaluatee, ev, firstName, rel, doneCount, pct) {
+  if (!container) return;
+  const page = currentSurvey.page || 1;
+  const pageModules = page === 1 ? MODULES.slice(0, 4) : MODULES.slice(4, 8);
+
+  const ntTried = ev?.nextOneTried || ev?.nextTicketTried || null;
+  const ntFb = ev?.nextOneFeedback || ev?.nextTicketFeedback || '';
+  const qStrength = ev.textAnswers?.['strength'] || ev.textAnswers?.['m10q14'] || '';
+  const qGrowth = ev.textAnswers?.['improvement'] || ev.textAnswers?.['m10q15'] || '';
+
+  const questionsCards = pageModules.map(m => {
+    const modAns = ev.moduleAnswers?.['m' + m.id] || {};
+    const currentVal = modAns['m' + m.id + 'q1'] !== undefined ? modAns['m' + m.id + 'q1'] : (modAns['q1'] !== undefined ? modAns['q1'] : null);
+    const isAnswered = currentVal !== null && currentVal !== undefined;
+    const isNA = currentVal === 'N/A';
+    const qText = m.questions[0].text.replace(/\{name\}/g, `<span style="color:#4F46E5;font-weight:800;">${firstName}</span>`);
+
+    // Stepper track fill percentage (1=0%, 2=25%, 3=50%, 4=75%, 5=100%)
+    const fillPct = (typeof currentVal === 'number' && currentVal >= 1 && currentVal <= 5) ? Math.round(((currentVal - 1) / 4) * 100) : 0;
+
+    const stepsHtml = [1, 2, 3, 4, 5].map(v => {
+      const opt = SCALE_OPTIONS.find(o => o.value === v) || { label: '' };
+      const isActive = currentVal === v;
       return `
-        <label class="scale-option ${isNA ? 'na' : ''}">
-          <input type="radio" name="${q.id}" value="${opt.value}" ${isChecked ? 'checked' : ''} onchange="handleScaleAnswer(${currentMod.id}, '${q.id}', '${opt.value}')">
-          <div class="scale-label">
-            <span class="scale-num">${isNA ? '⚪' : opt.value}</span>
-            <span class="scale-text">${opt.label}</span>
-          </div>
-        </label>
+        <div class="stepper-step-col ${isActive ? 'active' : ''}" onclick="handleCompositeAnswer(${m.id}, ${v})">
+          <div class="stepper-circle">${v}</div>
+          <div class="stepper-step-label">${opt.label}</div>
+        </div>
       `;
     }).join('');
 
     return `
-      <div class="question-card ${isAnswered ? 'answered' : ''}">
-        <div class="question-num">السؤال ${qIdx + 1} من ${totalInThisMod}</div>
-        <div class="question-text">${qText}</div>
-        <div class="scale-options">${optionsHtml}</div>
+      <div id="survey-question-${m.id}" class="q-compact-card ${isAnswered ? 'answered' : ''}">
+        <div class="q-card-header">
+          <div class="q-card-tag">
+            <span style="font-size:1.1rem;">${m.icon}</span>
+            <span>بطاقة السؤال ${m.id} من ${MODULES.length} · ${m.shortTitle || m.title}</span>
+          </div>
+          ${isAnswered 
+            ? '<span class="q-status-badge done">تم التقييم ✓</span>' 
+            : '<span class="q-status-badge pending">بانتظار التقييم</span>'}
+        </div>
+
+        <div class="q-criteria-summary">
+          <span>🎯 المعايير المدمجة:</span>
+          <span>${m.criteria1}</span>
+          <span style="color:#94A3B8;">+</span>
+          <span>${m.criteria2}</span>
+        </div>
+
+        <div class="q-prompt-title">
+          ${qText}
+        </div>
+
+        <!-- Horizontal Stepper (1 to 5) -->
+        <div class="stepper-container">
+          <div class="stepper-line-bg"></div>
+          <div class="stepper-line-fill" style="width: calc((100% - 96px) * ${fillPct} / 100);"></div>
+          <div class="stepper-steps-row">
+            ${stepsHtml}
+          </div>
+        </div>
+
+        <!-- Discrete N/A Pill (bottom right) -->
+        <div class="stepper-na-row">
+          <div class="stepper-na-pill ${isNA ? 'active' : ''}" onclick="handleCompositeAnswer(${m.id}, 'N/A')">
+            <span>لا ينطبق / لا أملك معلومات كافية</span>
+            <span class="stepper-na-dot"></span>
+          </div>
+        </div>
       </div>
     `;
   }).join('');
 
-  // Manager Questions (When evaluating a manager on Module 10)
-  let managerHtml = '';
-  if (evaluatee.isManager && currentMod.id === 10 && typeof MANAGER_EXTRA_QUESTIONS !== 'undefined') {
-    const mgrAnswers = ev.managerAnswers || {};
-    const mgrQuestions = MANAGER_EXTRA_QUESTIONS.map((mq, mqIdx) => {
-      const mqText = mq.text.replace(/\{name\}/g, `<span class="emp-name">${firstName}</span>`);
-      const currentVal = mgrAnswers[mq.id];
-      const isAnswered = currentVal !== undefined && currentVal !== null;
-
-      const opts = SCALE_OPTIONS.map(opt => {
-        const isChecked = currentVal === opt.value;
-        const isNA = opt.value === 'N/A';
-        return `
-          <label class="scale-option ${isNA ? 'na' : ''}">
-            <input type="radio" name="${mq.id}" value="${opt.value}" ${isChecked ? 'checked' : ''} onchange="handleManagerAnswer('${mq.id}', '${opt.value}')">
-            <div class="scale-label">
-              <span class="scale-num">${isNA ? '⚪' : opt.value}</span>
-              <span class="scale-text">${opt.label}</span>
-            </div>
-          </label>
-        `;
-      }).join('');
-
-      return `
-        <div class="question-card ${isAnswered ? 'answered' : ''}" style="margin-bottom:12px;">
-          <div class="question-num">محور القيادة — سؤال ${mqIdx + 1} من ${MANAGER_EXTRA_QUESTIONS.length}</div>
-          <div class="question-text">${mqText}</div>
-          <div class="scale-options">${opts}</div>
-        </div>
-      `;
-    }).join('');
-
-    managerHtml = `
-      <div class="manager-section">
-        <div class="manager-section-title">👔 قسم إضافي: تقييم المهارات القيادية والإدارية (${firstName} مدير مباشر)</div>
-        <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;">يرجى تقييم مهارات التوجيه والعدالة وتطوير الفريق:</div>
-        ${mgrQuestions}
+  // Page 1 Footer Flow
+  const page1Footer = `
+    <div class="survey-flow-bar">
+      <div style="font-size:0.85rem;font-weight:700;color:#64748B;">
+        الأسئلة 1 - 4 من 8 (الصفحة 1 من 2)
       </div>
-    `;
-  }
-
-  // Next One Question (Module 10)
-  let nextTicketHtml = '';
-  if (currentMod.id === 10) {
-    const tried = ev.nextOneTried || ev.nextTicketTried;
-    const fb = ev.nextOneFeedback || ev.nextTicketFeedback || '';
-    nextTicketHtml = `
-      <div class="next-ticket-box" style="background:#F8FAFC;border:2px solid #6366F1;border-radius:14px;padding:22px;margin-top:24px;box-shadow:0 4px 15px rgba(99,102,241,0.08);">
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
-          <div style="width:48px;height:48px;border-radius:12px;background:#EEF2FF;border:1px solid #C7D2FE;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;">✨</div>
-          <div>
-            <div style="font-size:1.05rem;font-weight:800;color:#1E1B4B;">سؤال استطلاعي ختامي</div>
-            <div style="font-size:0.92rem;color:#4338CA;font-weight:700;">هل جربت نكست ون سابقاً؟</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;">
-          <button type="button" class="btn btn-sm ${tried === 'yes' ? 'btn-primary' : 'btn-outline'}" style="padding:10px 20px;font-weight:700;font-size:0.9rem;" onclick="setNextOneAnswer('yes')">
-            ${tried === 'yes' ? '✓ نعم، جربتها' : 'نعم، جربتها'}
-          </button>
-          <button type="button" class="btn btn-sm ${tried === 'no' ? 'btn-danger' : 'btn-outline'}" style="padding:10px 20px;font-weight:700;font-size:0.9rem;" onclick="setNextOneAnswer('no')">
-            ${tried === 'no' ? '✕ لا، لم أجربها بعد' : 'لا، لم أجربها بعد'}
-          </button>
-        </div>
-        <div id="next-ticket-feedback-container" style="display:${tried === 'yes' ? 'block' : 'none'};margin-top:14px;">
-          <label style="display:block;font-size:0.82rem;font-weight:700;color:#475569;margin-bottom:6px;">ما تقييمك أو انطباعك عن تجربتك مع نكست ون؟ (اختياري)</label>
-          <input type="text" class="text-answer" style="min-height:auto;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;width:100%;" placeholder="اكتب ملاحظاتك أو تقييمك للأداة..." value="${fb}" oninput="setNextOneFeedback(this.value)">
-        </div>
-      </div>
-    `;
-  }
-
-  container.innerHTML = `
-    <div class="survey-module-header">
-      <div class="module-title-row">
-        <div class="module-icon-big" style="background:${currentMod.color}15;color:${currentMod.color};">${currentMod.icon}</div>
-        <div>
-          <div class="module-title">الوحدة ${currentMod.id}: ${currentMod.title}</div>
-          <div class="module-desc">${currentMod.description}</div>
-        </div>
-      </div>
-      <div class="module-progress">
-        <div class="module-progress-bar"><div class="module-progress-fill" style="width:${modProgressPercent}%;background:${currentMod.color};"></div></div>
-        <div class="module-progress-text">تمت الإجابة على ${answeredInThisMod} من ${totalInThisMod} سؤال (${modProgressPercent}%)</div>
-      </div>
+      <button type="button" class="survey-flow-btn-next" onclick="nextSurveyPage()">
+        <span>متابعة للأسئلة التالية (5 - 8) ←</span>
+      </button>
     </div>
-    <div class="questions-list">${questionsHtml}</div>
-    ${managerHtml}
-    ${nextTicketHtml}
   `;
 
-  // Nav buttons
-  const isFirst = currentSurvey.moduleIndex === 0;
-  const isLast = currentSurvey.moduleIndex === MODULES.length - 1;
+  // Page 2 Footer Flow (Includes Qualitative Feedback + Next One + Submit Button)
+  const page2Footer = `
+    <!-- Qualitative Feedback Card -->
+    <div class="q-compact-card" style="margin-top:20px;">
+      <div class="q-card-header" style="margin-bottom:12px;">
+        <div class="q-card-tag" style="font-size:0.85rem;color:#4F46E5;">
+          <span>✍️</span>
+          <span>الملاحظات النوعية وفرص التحسين والتطوير (اختياري)</span>
+        </div>
+      </div>
 
-  document.getElementById('btn-prev-module').style.visibility = isFirst ? 'hidden' : 'visible';
-  document.getElementById('btn-next-module').style.display = isLast ? 'none' : 'inline-flex';
-  document.getElementById('btn-submit-survey').classList.toggle('hidden', !isLast);
-  document.getElementById('survey-nav-info').innerText = `الوحدة ${currentMod.id} من ${MODULES.length} · تم الإجابة على ${answeredInThisMod} من ${totalInThisMod} سؤالاً`;
-}
-
-// 2. Quick Survey Mode (10 High-Level Modules with Conditional Deep Dive)
-function renderQuickSurvey(container, evaluatee, ev, firstName, rel) {
-  const moduleCards = MODULES.map(m => {
-    const modAns = ev.moduleAnswers?.[`m${m.id}`] || {};
-    // Average or primary score
-    const scores = Object.values(modAns).filter(v => typeof v === 'number');
-    const primaryScore = scores.length > 0 ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
-    const isNA = Object.values(modAns).includes('N/A');
-
-    const opts = SCALE_OPTIONS.map(opt => {
-      const isChecked = primaryScore === opt.value || (opt.value === 'N/A' && isNA);
-      const isNaOpt = opt.value === 'N/A';
-      return `
-        <label class="scale-option ${isNaOpt ? 'na' : ''}" style="margin:0;">
-          <input type="radio" name="quick_m${m.id}" value="${opt.value}" ${isChecked ? 'checked' : ''} onchange="handleQuickModuleAnswer(${m.id}, '${opt.value}')">
-          <div class="scale-label" style="min-height:54px;padding:6px 4px;">
-            <span class="scale-num" style="font-size:0.95rem;">${isNaOpt ? '⚪' : opt.value}</span>
-            <span class="scale-text" style="font-size:0.62rem;">${opt.label}</span>
-          </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:0.82rem;font-weight:700;display:block;margin-bottom:6px;color:#334155;">
+          أبرز نقاط قوة ${firstName} في العمل والمبادرة:
         </label>
-      `;
-    }).join('');
-
-    // If score is 1 or 2, auto expand top sub-questions for justification
-    const needsDetail = primaryScore !== null && primaryScore <= 2;
-    let detailSection = '';
-    if (needsDetail) {
-      detailSection = `
-        <div style="margin-top:12px;padding:12px;background:#FFF1F2;border-radius:8px;border:1px solid #FECDD3;">
-          <div style="font-size:0.75rem;font-weight:700;color:#9F1239;margin-bottom:6px;">⚠️ تفصيل سبب التقييم المنخفض (ملاحظات مساعدة للتطوير):</div>
-          <div style="font-size:0.8rem;color:#475569;">
-            ${m.questions.slice(0, 3).map(q => `
-              <div style="margin-bottom:6px;">• ${q.text.replace(/\{name\}/g, firstName)}</div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-
-    return `
-      <div class="question-card ${primaryScore !== null || isNA ? 'answered' : ''}" style="margin-bottom:14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:1.3rem;">${m.icon}</span>
-            <div>
-              <div style="font-weight:800;font-size:0.95rem;">${m.id}. ${m.title}</div>
-              <div style="font-size:0.75rem;color:var(--text-muted);">${m.description}</div>
-            </div>
-          </div>
-          <button class="btn btn-ghost btn-sm" style="font-size:0.72rem;" onclick="switchToDetailedModule(${m.id - 1})">التفاصيل (15 سؤالاً) ↗</button>
-        </div>
-        <div class="scale-options">${opts}</div>
-        ${detailSection}
-      </div>
-    `;
-  }).join('');
-
-  // Qualitative Feedback Section
-  const q14Val = ev.textAnswers?.['m10q14'] || '';
-  const q15Val = ev.textAnswers?.['m10q15'] || '';
-
-  container.innerHTML = `
-    <div style="background:white;padding:20px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:20px;box-shadow:var(--shadow);">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <h3 style="margin-bottom:4px;display:flex;align-items:center;gap:8px;">
-            <span>⚡</span> نموذج التقييم السريع بالمحاور الرئيسية
-          </h3>
-          <p style="font-size:0.82rem;color:var(--text-muted);margin:0;">
-            يتيح لك هذا الوضع تقييم الزميل عبر المحاور العشرة بفاعلية وسرعة، مع التوسيع التلقائي لفرص التطوير.
-          </p>
-        </div>
-        <span class="badge-rel ${rel.badgeClass}">${rel.label}</span>
-      </div>
-    </div>
-
-    <div>${moduleCards}</div>
-
-    <!-- Text Feedback -->
-    <div style="background:white;padding:20px;border-radius:var(--radius);border:1px solid var(--border);margin-top:20px;box-shadow:var(--shadow);">
-      <h4 style="margin-bottom:14px;color:var(--primary);">📝 الملاحظات النوعية وفرص التحسين</h4>
-      
-      <div style="margin-bottom:16px;">
-        <label style="font-size:0.85rem;font-weight:700;display:block;margin-bottom:6px;">أبرز نقاط قوة ${firstName} في العمل الجماعي والمشروعات:</label>
-        <textarea class="text-answer" placeholder="مثال: التزام ممتاز، دقة برمجية، مبادرة عالية..." oninput="handleTextAnswer('m10q14', this.value)">${q14Val}</textarea>
+        <textarea class="text-answer" style="min-height:70px;" placeholder="مثال: سرعة الرد على تذاكر العملاء، التزام استثنائي بـ SLA، دعم مستمر للزملاء وقت الضغط..." oninput="handleTextAnswer('strength', this.value)">${qStrength}</textarea>
       </div>
 
       <div>
-        <label style="font-size:0.85rem;font-weight:700;display:block;margin-bottom:6px;">فرصة تطوير مقترحة يمكن لـ ${firstName} التركيز عليها:</label>
-        <textarea class="text-answer" placeholder="مثال: تعزيز التوثيق، إدارة الأولويات وقت الضغط..." oninput="handleTextAnswer('m10q15', this.value)">${q15Val}</textarea>
+        <label style="font-size:0.82rem;font-weight:700;display:block;margin-bottom:6px;color:#334155;">
+          فرصة تطوير مقترحة يمكن لـ ${firstName} التركيز عليها:
+        </label>
+        <textarea class="text-answer" style="min-height:70px;" placeholder="مثال: مزيد من التوثيق في النظام، حضور تحديثات ميزات المنصة، إدارة المهام المتزامنة..." oninput="handleTextAnswer('improvement', this.value)">${qGrowth}</textarea>
       </div>
     </div>
 
-    <!-- Next One Question in Quick Mode -->
-    <div class="next-ticket-box" style="background:#F8FAFC;border:2px solid #6366F1;border-radius:14px;padding:22px;margin-top:20px;box-shadow:0 4px 15px rgba(99,102,241,0.08);">
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
-        <div style="width:48px;height:48px;border-radius:12px;background:#EEF2FF;border:1px solid #C7D2FE;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;">✨</div>
+    <!-- Next One Survey Card -->
+    <div class="q-compact-card" style="margin-top:16px;border:2px solid #818CF8;background:linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(238,242,255,0.7) 100%);">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <span style="font-size:1.6rem;background:#EEF2FF;padding:6px 10px;border-radius:12px;border:1px solid #C7D2FE;">✨</span>
         <div>
-          <div style="font-size:1.05rem;font-weight:800;color:#1E1B4B;">سؤال استطلاعي ختامي</div>
-          <div style="font-size:0.92rem;color:#4338CA;font-weight:700;">هل جربت نكست ون سابقاً؟</div>
+          <div style="font-size:0.76rem;font-weight:800;color:#6366F1;letter-spacing:0.5px;">سؤال استطلاعي ختامي</div>
+          <div style="font-size:1rem;font-weight:800;color:#1E1B4B;">هل جربت نكست ون سابقاً؟</div>
         </div>
       </div>
-      <div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;">
-        <button type="button" class="btn btn-sm ${(ev.nextOneTried || ev.nextTicketTried) === 'yes' ? 'btn-primary' : 'btn-outline'}" style="padding:10px 20px;font-weight:700;font-size:0.9rem;" onclick="setNextOneAnswer('yes')">
-          ${(ev.nextOneTried || ev.nextTicketTried) === 'yes' ? '✓ نعم، جربتها' : 'نعم، جربتها'}
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-sm ${ntTried === 'yes' ? 'btn-primary' : 'btn-outline'}" style="padding:9px 20px;font-weight:700;border-radius:10px;" onclick="setNextOneAnswer('yes')">
+          ${ntTried === 'yes' ? '✓ نعم، جربتها' : 'نعم، جربتها'}
         </button>
-        <button type="button" class="btn btn-sm ${(ev.nextOneTried || ev.nextTicketTried) === 'no' ? 'btn-danger' : 'btn-outline'}" style="padding:10px 20px;font-weight:700;font-size:0.9rem;" onclick="setNextOneAnswer('no')">
-          ${(ev.nextOneTried || ev.nextTicketTried) === 'no' ? '✕ لا، لم أجربها بعد' : 'لا، لم أجربها بعد'}
+        <button type="button" class="btn btn-sm ${ntTried === 'no' ? 'btn-danger' : 'btn-outline'}" style="padding:9px 20px;font-weight:700;border-radius:10px;" onclick="setNextOneAnswer('no')">
+          ${ntTried === 'no' ? '✕ لا، لم أجربها بعد' : 'لا، لم أجربها بعد'}
         </button>
       </div>
-      <div id="next-ticket-feedback-container" style="display:${(ev.nextOneTried || ev.nextTicketTried) === 'yes' ? 'block' : 'none'};margin-top:14px;">
-        <label style="display:block;font-size:0.82rem;font-weight:700;color:#475569;margin-bottom:6px;">ما تقييمك أو انطباعك عن تجربتك مع نكست ون؟ (اختياري)</label>
-        <input type="text" class="text-answer" style="min-height:auto;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;width:100%;" placeholder="اكتب ملاحظاتك أو تقييمك للأداة..." value="${ev.nextOneFeedback || ev.nextTicketFeedback || ''}" oninput="setNextOneFeedback(this.value)">
+      <div id="next-ticket-feedback-container" style="display:${ntTried === 'yes' ? 'block' : 'none'};margin-top:12px;">
+        <label style="display:block;font-size:0.78rem;font-weight:700;color:#475569;margin-bottom:4px;">ما تقييمك أو انطباعك عن تجربتك مع نكست ون؟ (اختياري)</label>
+        <input type="text" class="text-answer" style="min-height:auto;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.84rem;width:100%;" placeholder="اكتب ملاحظاتك أو تقييمك للأداة..." value="${ntFb}" oninput="setNextOneFeedback(this.value)">
       </div>
+    </div>
+
+    <!-- Page 2 Navigation Bar & Submit -->
+    <div class="survey-flow-bar" style="margin-top:20px;">
+      <button type="button" class="survey-flow-btn-prev" onclick="prevSurveyPage()">
+        <span>← الرجوع للأسئلة السابقة (1 - 4)</span>
+      </button>
+      <button type="button" class="survey-flow-btn-submit" onclick="submitSurvey()">
+        <span>اعتماد وإرسال التقييم النهائي ✓</span>
+      </button>
     </div>
   `;
 
-  // Nav buttons in quick mode
-  document.getElementById('btn-prev-module').style.visibility = 'hidden';
-  document.getElementById('btn-next-module').style.display = 'none';
-  document.getElementById('btn-submit-survey').classList.remove('hidden');
-  document.getElementById('survey-nav-info').innerText = `الوضع السريع الموحد · 10 محاور رئيسية`;
+  container.innerHTML = `
+    <!-- Top Notice Banner -->
+    <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.85);border:1px solid rgba(226,232,240,0.8);border-radius:14px;padding:12px 18px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+      <div style="display:flex;align-items:center;gap:8px;font-size:0.84rem;font-weight:700;color:#1E293B;">
+        <span>📝</span>
+        <span>استبيان تقييم ${evaluatee.name}</span>
+        <span style="color:#64748B;font-weight:500;font-size:0.78rem;">(${page === 1 ? 'الصفحة 1 من 2: الأسئلة 1 - 4' : 'الصفحة 2 من 2: الأسئلة 5 - 8'})</span>
+      </div>
+      <div style="font-size:0.75rem;background:#F1F5F9;padding:4px 10px;border-radius:999px;color:#475569;font-weight:700;">
+        ${doneCount} من ${MODULES.length} معايير مكتملة
+      </div>
+    </div>
+
+    <!-- Cards for the current page -->
+    ${questionsCards}
+
+    <!-- Page Footer Flow -->
+    ${page === 1 ? page1Footer : page2Footer}
+  `;
+}
+
+function handleCompositeAnswer(moduleId, rawVal) {
+  const evaluateeId = currentSurvey.evaluateeId;
+  const key = `${currentUser.id}_${evaluateeId}`;
+  if (!EVAL_DATA[key]) return;
+
+  if (!EVAL_DATA[key].moduleAnswers) EVAL_DATA[key].moduleAnswers = {};
+  if (!EVAL_DATA[key].moduleAnswers['m' + moduleId]) EVAL_DATA[key].moduleAnswers['m' + moduleId] = {};
+
+  const val = rawVal === 'N/A' ? 'N/A' : Number(rawVal);
+  EVAL_DATA[key].moduleAnswers['m' + moduleId]['m' + moduleId + 'q1'] = val;
+  EVAL_DATA[key].moduleAnswers['m' + moduleId]['q1'] = val; // for legacy helper functions
+  EVAL_DATA[key].status = 'in_progress';
+  saveEvalData();
+
+  scheduleRemoteSave(evaluateeId);
+  renderSurvey();
+}
+
+function handleScaleAnswer(moduleId, questionId, rawValue) {
+  handleCompositeAnswer(moduleId, rawValue);
+}
+
+function handleQuickModuleAnswer(moduleId, rawVal) {
+  handleCompositeAnswer(moduleId, rawVal);
 }
 
 function switchToDetailedModule(idx) {
-  setSurveyMode('detailed');
-  selectModule(idx);
+  scrollToQuestion(idx + 1);
 }
 
 let remoteSaveTimer = null;
@@ -1119,11 +1107,13 @@ function scheduleRemoteSave(evaluateeId) {
     if (!ev) return;
 
     let answeredCount = 0;
-    for (let m = 1; m <= 10; m++) {
-      const ma = ev.moduleAnswers?.[`m${m}`];
-      if (ma) answeredCount += Object.keys(ma).length;
+    for (let m = 1; m <= MODULES.length; m++) {
+      const ma = ev.moduleAnswers?.['m' + m];
+      if (ma && (ma['m' + m + 'q1'] !== undefined || ma['q1'] !== undefined || Object.keys(ma).length >= 1)) {
+        answeredCount++;
+      }
     }
-    const pct = Math.min(99, Math.round((answeredCount / 150) * 100));
+    const pct = Math.min(99, Math.round((answeredCount / MODULES.length) * 100));
 
     try {
       const res = await apiCall('/evaluations/save', 'POST', {
@@ -1131,6 +1121,8 @@ function scheduleRemoteSave(evaluateeId) {
         moduleAnswers: ev.moduleAnswers || {},
         textAnswers: ev.textAnswers || {},
         managerAnswers: ev.managerAnswers || {},
+        nextOneTried: ev.nextOneTried || ev.nextTicketTried || null,
+        nextOneFeedback: ev.nextOneFeedback || ev.nextTicketFeedback || null,
         progressPct: pct
       });
       if (res.ok) {
@@ -1142,43 +1134,6 @@ function scheduleRemoteSave(evaluateeId) {
       flashSaveStatus('local');
     }
   }, 400);
-}
-
-function handleQuickModuleAnswer(moduleId, rawVal) {
-  const evaluateeId = currentSurvey.evaluateeId;
-  const key = `${currentUser.id}_${evaluateeId}`;
-  if (!EVAL_DATA[key]) return;
-
-  if (!EVAL_DATA[key].moduleAnswers) EVAL_DATA[key].moduleAnswers = {};
-  if (!EVAL_DATA[key].moduleAnswers[`m${moduleId}`]) EVAL_DATA[key].moduleAnswers[`m${moduleId}`] = {};
-
-  const val = rawVal === 'N/A' ? 'N/A' : Number(rawVal);
-  // Fill questions in this module
-  for (let q = 1; q <= 15; q++) {
-    EVAL_DATA[key].moduleAnswers[`m${moduleId}`][`m${moduleId}q${q}`] = val;
-  }
-  EVAL_DATA[key].status = 'in_progress';
-  saveEvalData();
-
-  scheduleRemoteSave(evaluateeId);
-  renderSurvey();
-}
-
-function handleScaleAnswer(moduleId, questionId, rawValue) {
-  const evaluateeId = currentSurvey.evaluateeId;
-  const key = `${currentUser.id}_${evaluateeId}`;
-  if (!EVAL_DATA[key]) return;
-
-  if (!EVAL_DATA[key].moduleAnswers) EVAL_DATA[key].moduleAnswers = {};
-  if (!EVAL_DATA[key].moduleAnswers[`m${moduleId}`]) EVAL_DATA[key].moduleAnswers[`m${moduleId}`] = {};
-
-  const val = rawValue === 'N/A' ? 'N/A' : Number(rawValue);
-  EVAL_DATA[key].moduleAnswers[`m${moduleId}`][questionId] = val;
-  EVAL_DATA[key].status = 'in_progress';
-  saveEvalData();
-
-  scheduleRemoteSave(evaluateeId);
-  updateModuleHeaderProgress();
 }
 
 function handleManagerAnswer(questionId, rawValue) {
@@ -1207,20 +1162,19 @@ function handleTextAnswer(questionId, text) {
 }
 
 function flashSaveStatus(state = 'saved') {
-  const el = document.getElementById('survey-save-status');
+  const el = document.getElementById('survey-save-indicator') || document.getElementById('survey-save-status');
   if (!el) return;
 
   if (state === 'saving') {
-    el.innerText = '☁️ جاري الحفظ في السحابة...';
-    el.style.color = '#FEF08A';
+    el.innerText = 'جاري الحفظ... ⏳';
+    el.className = 'survey-save-pill saving';
   } else if (state === 'saved') {
-    el.innerText = '✓ تم الحفظ في قاعدة البيانات';
-    el.style.color = '#86EFAC';
-    setTimeout(() => { if (el) el.innerText = ''; }, 2000);
+    el.innerText = 'محفوظ سحابياً ✓';
+    el.className = 'survey-save-pill saved';
+    setTimeout(() => { if (el) { el.className = 'survey-save-pill'; } }, 2500);
   } else {
-    el.innerText = 'تم الحفظ محلياً ✓';
-    el.style.color = '#A5B4FC';
-    setTimeout(() => { if (el) el.innerText = ''; }, 2000);
+    el.innerText = 'محفوظ محلياً 💾';
+    el.className = 'survey-save-pill';
   }
 }
 
@@ -1249,9 +1203,11 @@ function submitSurvey() {
   const evaluatee = EMPLOYEES.find(e => e.id === evaluateeId);
 
   let totalAnswered = 0;
-  for (let m = 1; m <= 10; m++) {
-    const ma = ev?.moduleAnswers?.[`m${m}`];
-    if (ma) totalAnswered += Object.keys(ma).length;
+  for (let m = 1; m <= MODULES.length; m++) {
+    const ma = ev?.moduleAnswers?.['m' + m];
+    if (ma && (ma['m' + m + 'q1'] !== undefined || ma['q1'] !== undefined || Object.keys(ma).length >= 1)) {
+      totalAnswered++;
+    }
   }
 
   const ntTried = ev?.nextOneTried || ev?.nextTicketTried;
@@ -1394,7 +1350,7 @@ function calcEmployeeModuleScore(employeeId, moduleId) {
 function calcEmployeeOverallScore(employeeId) {
   const moduleAvgs = [];
   let totalValidAnswers = 0;
-  for (let m = 1; m <= 10; m++) {
+  for (let m = 1; m <= MODULES.length; m++) {
     const s = calcEmployeeModuleScore(employeeId, m);
     if (s) {
       moduleAvgs.push(s.avg);
@@ -1745,7 +1701,7 @@ function renderHrEmployees(container) {
   Object.values(EVAL_DATA).forEach(ev => {
     if (ev.evaluateeId === selectedEmp.id && ev.status === 'completed') {
       const avgEv = [];
-      for (let m = 1; m <= 10; m++) {
+      for (let m = 1; m <= MODULES.length; m++) {
         const ma = ev.moduleAnswers?.[`m${m}`];
         if (ma) Object.values(ma).forEach(v => { if (typeof v === 'number') avgEv.push(v); });
       }

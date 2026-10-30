@@ -767,16 +767,14 @@ svg.radar-svg { overflow: visible; }
 
 
 const MODULES_META = [
-  { id: 1, title: "الالتزام والانضباط", icon: "⏰", color: "#4F46E5" },
-  { id: 2, title: "جودة العمل",         icon: "⭐", color: "#059669" },
-  { id: 3, title: "التعاون الجماعي",    icon: "🤝", color: "#D97706" },
-  { id: 4, title: "التواصل المهني",     icon: "💬", color: "#7C3AED" },
-  { id: 5, title: "الكفاءة الفنية",     icon: "⚙️", color: "#0891B2" },
-  { id: 6, title: "حل المشكلات",        icon: "🔧", color: "#DC2626" },
-  { id: 7, title: "المبادرة والتطوير",  icon: "🚀", color: "#EA580C" },
-  { id: 8, title: "السلوك المهني",      icon: "🎯", color: "#7C3AED" },
-  { id: 9, title: "التأثير والإنتاج",   icon: "📈", color: "#0D9488" },
-  { id: 10, title: "التقييم العام",     icon: "💡", color: "#DB2777" },
+  { id: 1, title: "SLA والاستجابة العاجلة", icon: "⚡", color: "#3B82F6" },
+  { id: 2, title: "جودة الحل والتوثيق",     icon: "🎯", color: "#10B981" },
+  { id: 3, title: "إدارة الذروة والمرونة",  icon: "🔥", color: "#F59E0B" },
+  { id: 4, title: "العمل الجماعي والمساندة", icon: "🤝", color: "#6366F1" },
+  { id: 5, title: "ثقافة الشركة والنزاهة",  icon: "🏢", color: "#8B5CF6" },
+  { id: 6, title: "المشكلات المعقدة والاستباقية", icon: "🧩", color: "#EC4899" },
+  { id: 7, title: "التعلم وتحديثات مراسلاتي", icon: "📚", color: "#06B6D4" },
+  { id: 8, title: "التذاكر المتزامنة واحتفاظ العملاء", icon: "💎", color: "#14B8A6" },
 ];
 
 const TEAMS = [...new Set(EMPLOYEES.map(e => e.team))];
@@ -797,12 +795,49 @@ let state = {
   analysisData: null,
 };
 
+function showAccessDenied() {
+  const workspace = document.querySelector('.workspace-layout') || document.querySelector('.main-content');
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.style.display = 'none';
+  const container = document.querySelector('.canvas-area') || document.body;
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;text-align:center;padding:30px;background:#F8FAFC;">
+      <div style="width:90px;height:90px;border-radius:24px;background:#FEE2E2;border:2px solid #FECDD3;display:flex;align-items:center;justify-content:center;font-size:2.8rem;margin-bottom:20px;box-shadow:0 8px 20px rgba(239,68,68,0.15);">🔒</div>
+      <h2 style="color:#991B1B;font-size:1.6rem;font-weight:800;margin-bottom:12px;">وصول محجوب - لوحة التحليلات سرية</h2>
+      <p style="color:#4B5563;max-width:580px;font-size:0.95rem;line-height:1.7;margin-bottom:24px;">
+        للحفاظ على سرية ونزاهة نتائج تقييم 360 درجة، تم تقييد الوصول إلى لوحة التحليلات والإحصائيات لتكون مخصصة حصرياً لإدارة الموارد البشرية والمديرين المصرح لهم. لا يمكن للموظفين استعراض إجابات وتقييمات الزملاء.
+      </p>
+      <a href="/" style="background:#4F46E5;color:white;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.95rem;box-shadow:0 4px 12px rgba(79,70,229,0.25);">العودة إلى منصة التقييم</a>
+    </div>
+  `;
+}
+
 // Load data strictly from live PostgreSQL API (Authoritative source of truth)
 let EVAL_DATA = {};
 async function loadData() {
   const dbText = document.getElementById('live-db-text');
+  const token = localStorage.getItem('m360_token');
+  const userJson = localStorage.getItem('m360_user');
+  let user = null;
+  try { user = JSON.parse(userJson); } catch(e) {}
+
+  if (!token || !user || !user.isHRAdmin) {
+    showAccessDenied();
+    return;
+  }
+
   try {
-    const res = await fetch('/api/analytics');
+    const res = await fetch('/api/analytics', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      showAccessDenied();
+      return;
+    }
+
     if (res.ok) {
       const data = await res.json();
       if (data.ok && Array.isArray(data.rawEvaluations)) {
@@ -902,7 +937,7 @@ function getEmployeeModuleScore(employeeId, moduleId) {
 
 function getEmployeeOverallScore(employeeId) {
   const moduleScores = [];
-  for (let m = 1; m <= 10; m++) {
+  for (let m = 1; m <= 8; m++) {
     const s = getEmployeeModuleScore(employeeId, m);
     if (s) moduleScores.push(s.avg);
   }
