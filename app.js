@@ -839,7 +839,7 @@ function renderSurvey() {
   }
   const doneBadge = document.getElementById('sidebar-done-badge');
   if (doneBadge) {
-    doneBadge.innerText = `${doneCount} / ${MODULES.length}`;
+    doneBadge.innerText = `${doneCount} من ${MODULES.length}`;
   }
 
   // Sidebar Modules List (Matching screenshot)
@@ -888,14 +888,14 @@ const scrollToQuestion = goToSurveyQuestion;
 function nextSurveyPage() {
   currentSurvey.page = 2;
   renderSurvey();
-  const scrollArea = document.querySelector('.survey-cards-scroll') || window;
+  const scrollArea = document.getElementById('survey-scroll-container') || document.querySelector('.survey-content-area') || window;
   scrollArea.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function prevSurveyPage() {
   currentSurvey.page = 1;
   renderSurvey();
-  const scrollArea = document.querySelector('.survey-cards-scroll') || window;
+  const scrollArea = document.getElementById('survey-scroll-container') || document.querySelector('.survey-content-area') || window;
   scrollArea.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
