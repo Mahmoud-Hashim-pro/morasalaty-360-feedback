@@ -262,7 +262,9 @@ module.exports = async function handler(req, res) {
       // Fetch any existing evaluations made by this evaluator
       const myEvals = await sql`
         SELECT id, evaluatee_id, status, progress_pct, module_answers, text_answers, manager_answers, 
-               next_ticket_tried, next_ticket_feedback, updated_at, completed_at
+               COALESCE(next_one_tried, next_ticket_tried) as next_one_tried, 
+               COALESCE(next_one_feedback, next_ticket_feedback) as next_one_feedback,
+               updated_at, completed_at
         FROM m360_evaluations
         WHERE evaluator_id = ${authUser.id} AND cycle_id = '2026-Q1';
       `;
@@ -274,6 +276,8 @@ module.exports = async function handler(req, res) {
 
       const colleagueTasks = colleagues.map(c => {
         const existing = evalMap[c.id];
+        const ntTried = existing ? existing.next_one_tried : null;
+        const ntFeedback = existing ? existing.next_one_feedback : null;
         return {
           employee: c,
           evaluationId: existing ? existing.id : null,
@@ -282,8 +286,10 @@ module.exports = async function handler(req, res) {
           moduleAnswers: existing ? existing.module_answers : {},
           textAnswers: existing ? existing.text_answers : {},
           managerAnswers: existing ? existing.manager_answers : {},
-          nextTicketTried: existing ? existing.next_ticket_tried : null,
-          nextTicketFeedback: existing ? existing.next_ticket_feedback : null,
+          nextOneTried: ntTried,
+          nextOneFeedback: ntFeedback,
+          nextTicketTried: ntTried,
+          nextTicketFeedback: ntFeedback,
           updatedAt: existing ? existing.updated_at : null,
           completedAt: existing ? existing.completed_at : null
         };
@@ -309,7 +315,10 @@ module.exports = async function handler(req, res) {
         return sendJson(res, 401, { ok: false, error: 'غير مصرح بالدخول' });
       }
 
-      const { evaluateeId, moduleAnswers, textAnswers, managerAnswers, progressPct, nextTicketTried, nextTicketFeedback } = await parseBody(req);
+      const body = await parseBody(req);
+      const { evaluateeId, moduleAnswers, textAnswers, managerAnswers, progressPct } = body;
+      const nextOneTried = body.nextOneTried || body.nextTicketTried || null;
+      const nextOneFeedback = body.nextOneFeedback || body.nextTicketFeedback || null;
 
       if (!evaluateeId) {
         return sendJson(res, 400, { ok: false, error: 'معرّف الموظف المقيّم مطلوب' });
@@ -326,7 +335,8 @@ module.exports = async function handler(req, res) {
       await sql`
         INSERT INTO m360_evaluations (
           cycle_id, evaluator_id, evaluatee_id, status, progress_pct,
-          module_answers, text_answers, manager_answers, next_ticket_tried, next_ticket_feedback, updated_at
+          module_answers, text_answers, manager_answers, 
+          next_one_tried, next_one_feedback, next_ticket_tried, next_ticket_feedback, updated_at
         ) VALUES (
           ${cycleId},
           ${authUser.id},
@@ -336,8 +346,10 @@ module.exports = async function handler(req, res) {
           ${JSON.stringify(moduleAnswers || {})}::jsonb,
           ${JSON.stringify(textAnswers || {})}::jsonb,
           ${JSON.stringify(managerAnswers || {})}::jsonb,
-          ${nextTicketTried || null},
-          ${nextTicketFeedback || null},
+          ${nextOneTried},
+          ${nextOneFeedback},
+          ${nextOneTried},
+          ${nextOneFeedback},
           NOW()
         )
         ON CONFLICT (cycle_id, evaluator_id, evaluatee_id)
@@ -345,6 +357,8 @@ module.exports = async function handler(req, res) {
           module_answers = EXCLUDED.module_answers,
           text_answers = EXCLUDED.text_answers,
           manager_answers = EXCLUDED.manager_answers,
+          next_one_tried = COALESCE(EXCLUDED.next_one_tried, m360_evaluations.next_one_tried),
+          next_one_feedback = COALESCE(EXCLUDED.next_one_feedback, m360_evaluations.next_one_feedback),
           next_ticket_tried = COALESCE(EXCLUDED.next_ticket_tried, m360_evaluations.next_ticket_tried),
           next_ticket_feedback = COALESCE(EXCLUDED.next_ticket_feedback, m360_evaluations.next_ticket_feedback),
           progress_pct = EXCLUDED.progress_pct,
@@ -368,7 +382,10 @@ module.exports = async function handler(req, res) {
         return sendJson(res, 401, { ok: false, error: 'غير مصرح بالدخول' });
       }
 
-      const { evaluateeId, moduleAnswers, textAnswers, managerAnswers, nextTicketTried, nextTicketFeedback } = await parseBody(req);
+      const body = await parseBody(req);
+      const { evaluateeId, moduleAnswers, textAnswers, managerAnswers } = body;
+      const nextOneTried = body.nextOneTried || body.nextTicketTried || null;
+      const nextOneFeedback = body.nextOneFeedback || body.nextTicketFeedback || null;
 
       if (!evaluateeId) {
         return sendJson(res, 400, { ok: false, error: 'معرّف الموظف المقيّم مطلوب' });
@@ -384,7 +401,8 @@ module.exports = async function handler(req, res) {
       await sql`
         INSERT INTO m360_evaluations (
           cycle_id, evaluator_id, evaluatee_id, status, progress_pct,
-          module_answers, text_answers, manager_answers, next_ticket_tried, next_ticket_feedback, completed_at, updated_at
+          module_answers, text_answers, manager_answers, 
+          next_one_tried, next_one_feedback, next_ticket_tried, next_ticket_feedback, completed_at, updated_at
         ) VALUES (
           ${cycleId},
           ${authUser.id},
@@ -394,8 +412,10 @@ module.exports = async function handler(req, res) {
           ${JSON.stringify(moduleAnswers || {})}::jsonb,
           ${JSON.stringify(textAnswers || {})}::jsonb,
           ${JSON.stringify(managerAnswers || {})}::jsonb,
-          ${nextTicketTried || null},
-          ${nextTicketFeedback || null},
+          ${nextOneTried},
+          ${nextOneFeedback},
+          ${nextOneTried},
+          ${nextOneFeedback},
           NOW(),
           NOW()
         )
@@ -406,6 +426,8 @@ module.exports = async function handler(req, res) {
           module_answers = EXCLUDED.module_answers,
           text_answers = EXCLUDED.text_answers,
           manager_answers = EXCLUDED.manager_answers,
+          next_one_tried = COALESCE(EXCLUDED.next_one_tried, m360_evaluations.next_one_tried),
+          next_one_feedback = COALESCE(EXCLUDED.next_one_feedback, m360_evaluations.next_one_feedback),
           next_ticket_tried = COALESCE(EXCLUDED.next_ticket_tried, m360_evaluations.next_ticket_tried),
           next_ticket_feedback = COALESCE(EXCLUDED.next_ticket_feedback, m360_evaluations.next_ticket_feedback),
           completed_at = NOW(),
@@ -435,7 +457,8 @@ module.exports = async function handler(req, res) {
       const evaluations = await sql`
         SELECT id, cycle_id, evaluator_id, evaluatee_id, status, progress_pct,
                module_answers, text_answers, manager_answers, 
-               next_ticket_tried, next_ticket_feedback,
+               COALESCE(next_one_tried, next_ticket_tried) as next_one_tried, 
+               COALESCE(next_one_feedback, next_ticket_feedback) as next_one_feedback,
                created_at, updated_at, completed_at
         FROM m360_evaluations
         WHERE cycle_id = '2026-Q1';
@@ -559,8 +582,8 @@ module.exports = async function handler(req, res) {
         ? parseFloat((employeeRankings.filter(e => e.overallScore > 0).reduce((a, b) => a + b.overallScore, 0) / employeeRankings.filter(e => e.overallScore > 0).length).toFixed(2))
         : 0;
 
-      // Next Ticket Survey Stats
-      const nextTicketStats = {
+      // Next One Survey Stats
+      const nextOneStats = {
         totalAnswered: 0,
         yesCount: 0,
         noCount: 0,
@@ -569,20 +592,20 @@ module.exports = async function handler(req, res) {
       };
 
       evaluations.forEach(ev => {
-        if (ev.next_ticket_tried === 'yes') {
-          nextTicketStats.yesCount++;
-          nextTicketStats.totalAnswered++;
-          if (ev.next_ticket_feedback && typeof ev.next_ticket_feedback === 'string' && ev.next_ticket_feedback.trim()) {
-            nextTicketStats.feedbacks.push(ev.next_ticket_feedback.trim());
+        if (ev.next_one_tried === 'yes') {
+          nextOneStats.yesCount++;
+          nextOneStats.totalAnswered++;
+          if (ev.next_one_feedback && typeof ev.next_one_feedback === 'string' && ev.next_one_feedback.trim()) {
+            nextOneStats.feedbacks.push(ev.next_one_feedback.trim());
           }
-        } else if (ev.next_ticket_tried === 'no') {
-          nextTicketStats.noCount++;
-          nextTicketStats.totalAnswered++;
+        } else if (ev.next_one_tried === 'no') {
+          nextOneStats.noCount++;
+          nextOneStats.totalAnswered++;
         }
       });
 
-      if (nextTicketStats.totalAnswered > 0) {
-        nextTicketStats.yesPercent = Math.round((nextTicketStats.yesCount / nextTicketStats.totalAnswered) * 100);
+      if (nextOneStats.totalAnswered > 0) {
+        nextOneStats.yesPercent = Math.round((nextOneStats.yesCount / nextOneStats.totalAnswered) * 100);
       }
 
       return sendJson(res, 200, {
@@ -599,7 +622,8 @@ module.exports = async function handler(req, res) {
         companyModuleAverages,
         teamScores,
         rankings: employeeRankings,
-        nextTicketStats,
+        nextOneStats,
+        nextTicketStats: nextOneStats,
         rawEvaluations: evaluations
       });
     }

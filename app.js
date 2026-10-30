@@ -156,8 +156,10 @@ async function loadRemoteEvaluations() {
             moduleAnswers: ev.module_answers || {},
             textAnswers: ev.text_answers || {},
             managerAnswers: ev.manager_answers || {},
-            nextTicketTried: ev.next_ticket_tried || null,
-            nextTicketFeedback: ev.next_ticket_feedback || null,
+            nextOneTried: ev.next_one_tried || ev.next_ticket_tried || null,
+            nextOneFeedback: ev.next_one_feedback || ev.next_ticket_feedback || null,
+            nextTicketTried: ev.next_one_tried || ev.next_ticket_tried || null,
+            nextTicketFeedback: ev.next_one_feedback || ev.next_ticket_feedback || null,
             completedAt: ev.completed_at,
             updatedAt: ev.updated_at
           };
@@ -173,6 +175,8 @@ async function loadRemoteEvaluations() {
         res.data.colleagues.forEach(col => {
           if (col.status && col.status !== 'not_started') {
             const key = `${currentUser.id}_${col.employee.id}`;
+            const ntTried = col.nextOneTried || col.nextTicketTried || null;
+            const ntFeedback = col.nextOneFeedback || col.nextTicketFeedback || null;
             EVAL_DATA[key] = {
               id: col.evaluationId,
               evaluatorId: currentUser.id,
@@ -183,8 +187,10 @@ async function loadRemoteEvaluations() {
               moduleAnswers: col.moduleAnswers || {},
               textAnswers: col.textAnswers || {},
               managerAnswers: col.managerAnswers || {},
-              nextTicketTried: col.nextTicketTried || null,
-              nextTicketFeedback: col.nextTicketFeedback || null,
+              nextOneTried: ntTried,
+              nextOneFeedback: ntFeedback,
+              nextTicketTried: ntTried,
+              nextTicketFeedback: ntFeedback,
               completedAt: col.completedAt,
               updatedAt: col.updatedAt
             };
@@ -683,7 +689,7 @@ function goToDashboard() {
   renderEmployeeDashboard();
 }
 
-function setNextTicketAnswer(val) {
+function setNextOneAnswer(val) {
   const evaluateeId = currentSurvey.evaluateeId;
   const key = `${currentUser.id}_${evaluateeId}`;
   if (!EVAL_DATA[key]) {
@@ -697,6 +703,7 @@ function setNextTicketAnswer(val) {
       managerAnswers: {}
     };
   }
+  EVAL_DATA[key].nextOneTried = val;
   EVAL_DATA[key].nextTicketTried = val;
   saveEvalData();
 
@@ -706,26 +713,32 @@ function setNextTicketAnswer(val) {
     moduleAnswers: EVAL_DATA[key].moduleAnswers || {},
     textAnswers: EVAL_DATA[key].textAnswers || {},
     managerAnswers: EVAL_DATA[key].managerAnswers || {},
+    nextOneTried: val,
+    nextOneFeedback: EVAL_DATA[key].nextOneFeedback || EVAL_DATA[key].nextTicketFeedback || '',
     nextTicketTried: val,
-    nextTicketFeedback: EVAL_DATA[key].nextTicketFeedback || ''
+    nextTicketFeedback: EVAL_DATA[key].nextOneFeedback || EVAL_DATA[key].nextTicketFeedback || ''
   }).catch(() => {});
 
   renderSurvey();
 }
+const setNextTicketAnswer = setNextOneAnswer;
 
-function setNextTicketFeedback(text) {
+function setNextOneFeedback(text) {
   const evaluateeId = currentSurvey.evaluateeId;
   const key = `${currentUser.id}_${evaluateeId}`;
   if (EVAL_DATA[key]) {
+    EVAL_DATA[key].nextOneFeedback = text;
     EVAL_DATA[key].nextTicketFeedback = text;
     saveEvalData();
   }
 }
+const setNextTicketFeedback = setNextOneFeedback;
 
 function handleModalNtChange(val) {
   const evaluateeId = currentSurvey.evaluateeId;
   const key = `${currentUser.id}_${evaluateeId}`;
   if (EVAL_DATA[key]) {
+    EVAL_DATA[key].nextOneTried = val;
     EVAL_DATA[key].nextTicketTried = val;
     saveEvalData();
   }
@@ -737,6 +750,7 @@ function handleModalNtFeedback(text) {
   const evaluateeId = currentSurvey.evaluateeId;
   const key = `${currentUser.id}_${evaluateeId}`;
   if (EVAL_DATA[key]) {
+    EVAL_DATA[key].nextOneFeedback = text;
     EVAL_DATA[key].nextTicketFeedback = text;
     saveEvalData();
   }
@@ -906,31 +920,31 @@ function renderDetailedSurvey(container, evaluatee, ev, firstName, rel) {
     `;
   }
 
-  // Next Ticket Question (Module 10)
+  // Next One Question (Module 10)
   let nextTicketHtml = '';
   if (currentMod.id === 10) {
-    const tried = ev.nextTicketTried;
-    const fb = ev.nextTicketFeedback || '';
+    const tried = ev.nextOneTried || ev.nextTicketTried;
+    const fb = ev.nextOneFeedback || ev.nextTicketFeedback || '';
     nextTicketHtml = `
       <div class="next-ticket-box" style="background:#F8FAFC;border:2px solid #6366F1;border-radius:14px;padding:22px;margin-top:24px;box-shadow:0 4px 15px rgba(99,102,241,0.08);">
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
-          <div style="width:48px;height:48px;border-radius:12px;background:#EEF2FF;border:1px solid #C7D2FE;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;">🎫</div>
+          <div style="width:48px;height:48px;border-radius:12px;background:#EEF2FF;border:1px solid #C7D2FE;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;">✨</div>
           <div>
             <div style="font-size:1.05rem;font-weight:800;color:#1E1B4B;">سؤال استطلاعي ختامي</div>
-            <div style="font-size:0.92rem;color:#4338CA;font-weight:700;">هل جربت نكست تيكت سابقاً؟</div>
+            <div style="font-size:0.92rem;color:#4338CA;font-weight:700;">هل جربت نكست ون سابقاً؟</div>
           </div>
         </div>
         <div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;">
-          <button type="button" class="btn btn-sm ${tried === 'yes' ? 'btn-primary' : 'btn-outline'}" style="padding:10px 20px;font-weight:700;font-size:0.9rem;" onclick="setNextTicketAnswer('yes')">
+          <button type="button" class="btn btn-sm ${tried === 'yes' ? 'btn-primary' : 'btn-outline'}" style="padding:10px 20px;font-weight:700;font-size:0.9rem;" onclick="setNextOneAnswer('yes')">
             ${tried === 'yes' ? '✓ نعم، جربتها' : 'نعم، جربتها'}
           </button>
-          <button type="button" class="btn btn-sm ${tried === 'no' ? 'btn-danger' : 'btn-outline'}" style="padding:10px 20px;font-weight:700;font-size:0.9rem;" onclick="setNextTicketAnswer('no')">
+          <button type="button" class="btn btn-sm ${tried === 'no' ? 'btn-danger' : 'btn-outline'}" style="padding:10px 20px;font-weight:700;font-size:0.9rem;" onclick="setNextOneAnswer('no')">
             ${tried === 'no' ? '✕ لا، لم أجربها بعد' : 'لا، لم أجربها بعد'}
           </button>
         </div>
         <div id="next-ticket-feedback-container" style="display:${tried === 'yes' ? 'block' : 'none'};margin-top:14px;">
-          <label style="display:block;font-size:0.82rem;font-weight:700;color:#475569;margin-bottom:6px;">ما تقييمك أو انطباعك عن تجربتك مع نكست تيكت؟ (اختياري)</label>
-          <input type="text" class="text-answer" style="min-height:auto;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;width:100%;" placeholder="اكتب ملاحظاتك أو تقييمك للأداة..." value="${fb}" oninput="setNextTicketFeedback(this.value)">
+          <label style="display:block;font-size:0.82rem;font-weight:700;color:#475569;margin-bottom:6px;">ما تقييمك أو انطباعك عن تجربتك مع نكست ون؟ (اختياري)</label>
+          <input type="text" class="text-answer" style="min-height:auto;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;width:100%;" placeholder="اكتب ملاحظاتك أو تقييمك للأداة..." value="${fb}" oninput="setNextOneFeedback(this.value)">
         </div>
       </div>
     `;
@@ -1058,26 +1072,26 @@ function renderQuickSurvey(container, evaluatee, ev, firstName, rel) {
       </div>
     </div>
 
-    <!-- Next Ticket Question in Quick Mode -->
+    <!-- Next One Question in Quick Mode -->
     <div class="next-ticket-box" style="background:#F8FAFC;border:2px solid #6366F1;border-radius:14px;padding:22px;margin-top:20px;box-shadow:0 4px 15px rgba(99,102,241,0.08);">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
-        <div style="width:48px;height:48px;border-radius:12px;background:#EEF2FF;border:1px solid #C7D2FE;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;">🎫</div>
+        <div style="width:48px;height:48px;border-radius:12px;background:#EEF2FF;border:1px solid #C7D2FE;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;">✨</div>
         <div>
           <div style="font-size:1.05rem;font-weight:800;color:#1E1B4B;">سؤال استطلاعي ختامي</div>
-          <div style="font-size:0.92rem;color:#4338CA;font-weight:700;">هل جربت نكست تيكت سابقاً؟</div>
+          <div style="font-size:0.92rem;color:#4338CA;font-weight:700;">هل جربت نكست ون سابقاً؟</div>
         </div>
       </div>
       <div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;">
-        <button type="button" class="btn btn-sm ${ev.nextTicketTried === 'yes' ? 'btn-primary' : 'btn-outline'}" style="padding:10px 20px;font-weight:700;font-size:0.9rem;" onclick="setNextTicketAnswer('yes')">
-          ${ev.nextTicketTried === 'yes' ? '✓ نعم، جربتها' : 'نعم، جربتها'}
+        <button type="button" class="btn btn-sm ${(ev.nextOneTried || ev.nextTicketTried) === 'yes' ? 'btn-primary' : 'btn-outline'}" style="padding:10px 20px;font-weight:700;font-size:0.9rem;" onclick="setNextOneAnswer('yes')">
+          ${(ev.nextOneTried || ev.nextTicketTried) === 'yes' ? '✓ نعم، جربتها' : 'نعم، جربتها'}
         </button>
-        <button type="button" class="btn btn-sm ${ev.nextTicketTried === 'no' ? 'btn-danger' : 'btn-outline'}" style="padding:10px 20px;font-weight:700;font-size:0.9rem;" onclick="setNextTicketAnswer('no')">
-          ${ev.nextTicketTried === 'no' ? '✕ لا، لم أجربها بعد' : 'لا، لم أجربها بعد'}
+        <button type="button" class="btn btn-sm ${(ev.nextOneTried || ev.nextTicketTried) === 'no' ? 'btn-danger' : 'btn-outline'}" style="padding:10px 20px;font-weight:700;font-size:0.9rem;" onclick="setNextOneAnswer('no')">
+          ${(ev.nextOneTried || ev.nextTicketTried) === 'no' ? '✕ لا، لم أجربها بعد' : 'لا، لم أجربها بعد'}
         </button>
       </div>
-      <div id="next-ticket-feedback-container" style="display:${ev.nextTicketTried === 'yes' ? 'block' : 'none'};margin-top:14px;">
-        <label style="display:block;font-size:0.82rem;font-weight:700;color:#475569;margin-bottom:6px;">ما تقييمك أو انطباعك عن تجربتك مع نكست تيكت؟ (اختياري)</label>
-        <input type="text" class="text-answer" style="min-height:auto;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;width:100%;" placeholder="اكتب ملاحظاتك أو تقييمك للأداة..." value="${ev.nextTicketFeedback || ''}" oninput="setNextTicketFeedback(this.value)">
+      <div id="next-ticket-feedback-container" style="display:${(ev.nextOneTried || ev.nextTicketTried) === 'yes' ? 'block' : 'none'};margin-top:14px;">
+        <label style="display:block;font-size:0.82rem;font-weight:700;color:#475569;margin-bottom:6px;">ما تقييمك أو انطباعك عن تجربتك مع نكست ون؟ (اختياري)</label>
+        <input type="text" class="text-answer" style="min-height:auto;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;width:100%;" placeholder="اكتب ملاحظاتك أو تقييمك للأداة..." value="${ev.nextOneFeedback || ev.nextTicketFeedback || ''}" oninput="setNextOneFeedback(this.value)">
       </div>
     </div>
   `;
@@ -1240,8 +1254,8 @@ function submitSurvey() {
     if (ma) totalAnswered += Object.keys(ma).length;
   }
 
-  const ntTried = ev?.nextTicketTried;
-  const ntFb = ev?.nextTicketFeedback || '';
+  const ntTried = ev?.nextOneTried || ev?.nextTicketTried;
+  const ntFb = ev?.nextOneFeedback || ev?.nextTicketFeedback || '';
 
   const modalBody = `
     <div style="text-align:center;padding:12px 0;">
@@ -1252,13 +1266,13 @@ function submitSurvey() {
         بمجرد الاعتماد النهائي، تُقفل الاستمارة وتُرسل مباشرة إلى قاعدة البيانات السحابية ومحرك التحليل ولوحة الموارد البشرية بسرية تامة.
       </p>
 
-      <!-- Next Ticket Question in Submit Modal -->
+      <!-- Next One Question in Submit Modal -->
       <div style="background:#F0FDF4;border:2px solid #86EFAC;border-radius:14px;padding:16px;text-align:right;margin-top:14px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-          <span style="font-size:1.6rem;">🎫</span>
+          <span style="font-size:1.6rem;">✨</span>
           <div>
             <div style="font-weight:800;color:#166534;font-size:0.95rem;">سؤال استطلاعي ختامي:</div>
-            <div style="font-size:0.92rem;font-weight:700;color:#14532D;">هل جربت نكست تيكت سابقاً؟</div>
+            <div style="font-size:0.92rem;font-weight:700;color:#14532D;">هل جربت نكست ون سابقاً؟</div>
           </div>
         </div>
         <div style="display:flex;gap:12px;margin:12px 0;">
@@ -1272,7 +1286,7 @@ function submitSurvey() {
           </label>
         </div>
         <div id="modal-nt-feedback-wrap" style="display:${ntTried === 'yes' ? 'block' : 'none'};margin-top:8px;">
-          <input type="text" id="modal-nt-feedback" placeholder="ملاحظاتك أو انطباعك عن نكست تيكت (اختياري)..." value="${ntFb}" style="width:100%;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.85rem;" oninput="handleModalNtFeedback(this.value)">
+          <input type="text" id="modal-nt-feedback" placeholder="ملاحظاتك أو انطباعك عن نكست ون (اختياري)..." value="${ntFb}" style="width:100%;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.85rem;" oninput="handleModalNtFeedback(this.value)">
         </div>
       </div>
     </div>
@@ -1294,10 +1308,12 @@ async function confirmSubmitSurvey(key) {
   // Read latest modal values if selected
   const modalNt = document.querySelector('input[name="modal_nt"]:checked');
   if (modalNt && ev) {
+    ev.nextOneTried = modalNt.value;
     ev.nextTicketTried = modalNt.value;
   }
   const modalFb = document.getElementById('modal-nt-feedback');
   if (modalFb && modalFb.value && ev) {
+    ev.nextOneFeedback = modalFb.value;
     ev.nextTicketFeedback = modalFb.value;
   }
 
@@ -1314,8 +1330,10 @@ async function confirmSubmitSurvey(key) {
       moduleAnswers: ev?.moduleAnswers || {},
       textAnswers: ev?.textAnswers || {},
       managerAnswers: ev?.managerAnswers || {},
-      nextTicketTried: ev?.nextTicketTried || null,
-      nextTicketFeedback: ev?.nextTicketFeedback || null
+      nextOneTried: ev?.nextOneTried || ev?.nextTicketTried || null,
+      nextOneFeedback: ev?.nextOneFeedback || ev?.nextTicketFeedback || null,
+      nextTicketTried: ev?.nextOneTried || ev?.nextTicketTried || null,
+      nextTicketFeedback: ev?.nextOneFeedback || ev?.nextTicketFeedback || null
     });
     if (res.ok) {
       showToast('✓ تم اعتماد التقييم بنجاح وحفظه في قاعدة البيانات المركزية!');
@@ -1329,7 +1347,7 @@ async function confirmSubmitSurvey(key) {
   // Refresh evaluations from server to ensure accurate live state
   await loadRemoteEvaluations();
 
-  // Completion Celebration Modal with Next Ticket Status
+  // Completion Celebration Modal with Next One Status
   const doneModalBody = `
     <div style="text-align:center;padding:24px 12px;">
       <span style="font-size:3.5rem;display:block;margin-bottom:12px;">🎉</span>
@@ -1338,10 +1356,10 @@ async function confirmSubmitSurvey(key) {
         تم توثيق تقييمك بأمان في قاعدة البيانات السحابية (Neon PostgreSQL).
       </p>
       <div style="background:#F8FAFC;border:1px solid #E2E8F0;padding:12px 18px;border-radius:12px;display:inline-flex;align-items:center;gap:10px;font-size:0.88rem;color:#1E293B;">
-        <span style="font-size:1.4rem;">🎫</span>
-        <span>تجربة نكست تيكت:</span>
-        <strong style="color:${ev?.nextTicketTried === 'yes' ? '#15803D' : (ev?.nextTicketTried === 'no' ? '#B91C1C' : '#64748B')};">
-          ${ev?.nextTicketTried === 'yes' ? 'نعم (تمت التجربة سابقاً ✓)' : (ev?.nextTicketTried === 'no' ? 'لا (لم تتم التجربة بعد)' : 'تم الحفظ')}
+        <span style="font-size:1.4rem;">✨</span>
+        <span>تجربة نكست ون:</span>
+        <strong style="color:${(ev?.nextOneTried || ev?.nextTicketTried) === 'yes' ? '#15803D' : ((ev?.nextOneTried || ev?.nextTicketTried) === 'no' ? '#B91C1C' : '#64748B')};">
+          ${(ev?.nextOneTried || ev?.nextTicketTried) === 'yes' ? 'نعم (تمت التجربة سابقاً ✓)' : ((ev?.nextOneTried || ev?.nextTicketTried) === 'no' ? 'لا (لم تتم التجربة بعد)' : 'تم الحفظ')}
         </strong>
       </div>
     </div>
@@ -1456,13 +1474,13 @@ function renderHrOverview(container) {
   const remainingEvaluations = possibleEvaluations - completedEvaluations - inProgressEvaluations;
   const completionRate = Math.round((completedEvaluations / possibleEvaluations) * 100);
 
-  // Next Ticket Stats
-  const ntEvals = Object.values(EVAL_DATA).filter(e => e.nextTicketTried);
-  const ntYesCount = ntEvals.filter(e => e.nextTicketTried === 'yes').length;
-  const ntNoCount = ntEvals.filter(e => e.nextTicketTried === 'no').length;
+  // Next One Stats
+  const ntEvals = Object.values(EVAL_DATA).filter(e => e.nextOneTried || e.nextTicketTried);
+  const ntYesCount = ntEvals.filter(e => (e.nextOneTried || e.nextTicketTried) === 'yes').length;
+  const ntNoCount = ntEvals.filter(e => (e.nextOneTried || e.nextTicketTried) === 'no').length;
   const ntTotal = ntYesCount + ntNoCount;
   const ntPercent = ntTotal > 0 ? Math.round((ntYesCount / ntTotal) * 100) : 0;
-  const ntFeedbacks = ntEvals.filter(e => e.nextTicketFeedback && typeof e.nextTicketFeedback === 'string' && e.nextTicketFeedback.trim()).map(e => e.nextTicketFeedback.trim());
+  const ntFeedbacks = ntEvals.filter(e => (e.nextOneFeedback || e.nextTicketFeedback) && typeof (e.nextOneFeedback || e.nextTicketFeedback) === 'string' && (e.nextOneFeedback || e.nextTicketFeedback).trim()).map(e => (e.nextOneFeedback || e.nextTicketFeedback).trim());
 
   // Overall average
   const empScores = EMPLOYEES.map(e => ({ emp: e, score: calcEmployeeOverallScore(e.id) }))
@@ -1493,14 +1511,14 @@ function renderHrOverview(container) {
   container.innerHTML = `
     <div class="hr-section-title"><span>🏠</span> لوحة المتابعة الشاملة لمخرجات التقييم 360° (دورة Q4)</div>
 
-    <!-- Next Ticket Survey Stats Card -->
+    <!-- Next One Survey Stats Card -->
     <div style="background:linear-gradient(135deg, #1E1B4B 0%, #312E81 100%);color:white;padding:22px 26px;border-radius:var(--radius);margin-bottom:24px;box-shadow:0 8px 20px rgba(49,46,129,0.25);">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
         <div style="display:flex;align-items:center;gap:16px;">
-          <div style="width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:1px solid rgba(255,255,255,0.2);">🎫</div>
+          <div style="width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:1px solid rgba(255,255,255,0.2);">✨</div>
           <div>
-            <div style="font-size:1.15rem;font-weight:800;color:#EEF2FF;margin-bottom:2px;">استطلاع تجربة نكست تيكت (Next Ticket)</div>
-            <div style="font-size:0.85rem;color:#C7D2FE;">إجابات الموظفين على سؤال: «هل جربت نكست تيكت سابقاً؟» في ختام الاستطلاع</div>
+            <div style="font-size:1.15rem;font-weight:800;color:#EEF2FF;margin-bottom:2px;">استطلاع تجربة نكست ون (Next One)</div>
+            <div style="font-size:0.85rem;color:#C7D2FE;">إجابات الموظفين على سؤال: «هل جربت نكست ون سابقاً؟» في ختام الاستطلاع</div>
           </div>
         </div>
         <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">

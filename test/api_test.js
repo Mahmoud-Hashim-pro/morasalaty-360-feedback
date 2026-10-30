@@ -29,6 +29,13 @@ async function runTests() {
   await new Promise(resolve => server.listen(PORT, resolve));
   console.log(`🧪 Running API Integration Tests on port ${PORT}...`);
 
+  // Ensure clean starting state
+  try {
+    const { getSql } = require('../db/db');
+    await getSql()`TRUNCATE TABLE m360_evaluations RESTART IDENTITY;`;
+    await getSql()`TRUNCATE TABLE m360_sessions RESTART IDENTITY;`;
+  } catch (e) {}
+
   try {
     // 1. Health check
     console.log('1️⃣ Testing /api/health...');
@@ -142,15 +149,15 @@ async function runTests() {
       moduleAnswers: { m1: { q1: 5, q2: 5, q3: 4 } },
       textAnswers: { m1: 'تعاون ممتاز وتقييم اختباري للتأكد من الحفظ الفعلي' },
       managerAnswers: {},
-      nextTicketTried: 'yes',
-      nextTicketFeedback: 'تجربة ممتازة في إدارة التذاكر وخدمة العملاء',
+      nextOneTried: 'yes',
+      nextOneFeedback: 'تجربة ممتازة في نكست ون',
       progressPct: 20
     });
     assert.strictEqual(saveRes.status, 200);
     assert.strictEqual(saveRes.data.ok, true);
-    console.log('   ✅ /api/evaluations/save draft passed with Next Ticket response!');
+    console.log('   ✅ /api/evaluations/save draft passed with Next One response!');
 
-    // 6b. Submit Final Evaluation with Next Ticket
+    // 6b. Submit Final Evaluation with Next One
     console.log('6️⃣b Testing /api/evaluations/submit final...');
     const submitRes = await request({
       hostname: 'localhost',
@@ -166,12 +173,12 @@ async function runTests() {
       moduleAnswers: { m1: { q1: 5, q2: 5, q3: 5 } },
       textAnswers: { m1: 'تقييم معتمد نهائي' },
       managerAnswers: {},
-      nextTicketTried: 'yes',
-      nextTicketFeedback: 'ممتازة وسريعة في خدمة العملاء'
+      nextOneTried: 'yes',
+      nextOneFeedback: 'أداة ممتازة وسريعة'
     });
     assert.strictEqual(submitRes.status, 200);
     assert.strictEqual(submitRes.data.ok, true);
-    console.log('   ✅ /api/evaluations/submit passed with Next Ticket persisted!');
+    console.log('   ✅ /api/evaluations/submit passed with Next One persisted!');
 
     // 7. Prevent self evaluation
     console.log('7️⃣ Testing prevention of self-evaluation...');
@@ -204,9 +211,10 @@ async function runTests() {
     assert.strictEqual(analyticsRes.data.summary.totalEmployees, 17);
     assert.strictEqual(analyticsRes.data.summary.totalExpectedEvaluations, 272);
     assert.strictEqual(analyticsRes.data.rankings.length, 17);
+    assert.strictEqual(analyticsRes.data.nextOneStats.yesCount, 1);
+    assert.strictEqual(analyticsRes.data.nextOneStats.totalAnswered, 1);
     assert.strictEqual(analyticsRes.data.nextTicketStats.yesCount, 1);
-    assert.strictEqual(analyticsRes.data.nextTicketStats.totalAnswered, 1);
-    console.log(`   ✅ /api/analytics passed! Next Ticket stats verified (yesCount: 1).`);
+    console.log(`   ✅ /api/analytics passed! Next One & Next Ticket stats verified (yesCount: 1).`);
 
     console.log('\n🎉 ALL 8 INTEGRATION TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
