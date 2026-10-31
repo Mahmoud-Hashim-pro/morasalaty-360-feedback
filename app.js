@@ -674,13 +674,12 @@ function renderColleaguesGrid() {
           <div class="colleague-avatar" style="background:${color};">${initials}</div>
           <div class="colleague-info">
             <div class="colleague-name">${peer.name}</div>
-            <div class="colleague-role">${peer.role}</div>
+            <div class="colleague-role" style="font-weight:700;color:var(--primary);">فريق ${peer.team}</div>
           </div>
           <span class="status-badge ${badgeClass}">${badgeText}</span>
         </div>
         
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div class="colleague-team" style="margin:0;">🏢 ${peer.team}</div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px;">
           <span class="badge-rel ${rel.badgeClass}">${rel.label}</span>
         </div>
 
@@ -855,7 +854,7 @@ function renderManagerMenu(targetEmpId) {
               <div class="eval-emp-chip-avatar" style="background:${getEmployeeColor(emp)};">${getInitials(emp.name)}</div>
               <div>
                 <div class="eval-emp-chip-name">${emp.name}</div>
-                <div class="eval-emp-chip-role">${emp.role} • ${emp.team}</div>
+                <div class="eval-emp-chip-role">فريق ${emp.team}</div>
               </div>
             </div>
           `;
@@ -872,7 +871,7 @@ function renderManagerMenu(targetEmpId) {
           </div>
           <div class="eval-emp-details">
             <h3>تقييم المدير للموظف: ${target.name}</h3>
-            <p>${target.role} | فريق ${target.team} | ${target.email}</p>
+            <p>فريق ${target.team}</p>
           </div>
         </div>
         <div>
@@ -1120,7 +1119,7 @@ function renderFatimaMenu(targetEmpId) {
               <div class="eval-emp-chip-avatar" style="background:${getEmployeeColor(emp)};">${getInitials(emp.name)}</div>
               <div>
                 <div class="eval-emp-chip-name">${emp.name}</div>
-                <div class="eval-emp-chip-role">${emp.role} • ${emp.team}</div>
+                <div class="eval-emp-chip-role">فريق ${emp.team}</div>
               </div>
             </div>
           `;
@@ -1137,7 +1136,7 @@ function renderFatimaMenu(targetEmpId) {
           </div>
           <div class="eval-emp-details">
             <h3>تقييم الموارد البشرية (فاطمة) للموظف: ${target.name}</h3>
-            <p>${target.role} | فريق ${target.team} | ${target.email}</p>
+            <p>فريق ${target.team}</p>
           </div>
         </div>
         <div>
@@ -1611,9 +1610,12 @@ function renderSurvey() {
   const sName = document.getElementById('survey-name');
   if (sName) sName.innerText = evaluatee.name;
   const sRole = document.getElementById('survey-role');
-  if (sRole) sRole.innerText = `${evaluatee.role} · ${evaluatee.team}`;
+  if (sRole) sRole.innerText = `فريق ${evaluatee.team}`;
   const sRel = document.getElementById('survey-rel-tag');
-  if (sRel) sRel.innerHTML = `<span class="badge-rel ${rel.badgeClass}">${rel.label}</span>`;
+  if (sRel) {
+    sRel.innerHTML = '';
+    sRel.style.display = 'none';
+  }
 
   // Count done questions
   let doneCount = 0;
