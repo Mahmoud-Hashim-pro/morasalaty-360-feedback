@@ -463,6 +463,183 @@ module.exports = async function handler(req, res) {
     }
 
     // -------------------------------------------------------------------------
+    // 8b. Manager Evaluations (Tariq & Hashim Menu) (/evaluations/manager-eval)
+    // -------------------------------------------------------------------------
+    if (pathname === '/evaluations/manager-eval' || pathname === '/manager-eval') {
+      const authUser = await authenticateRequest(req, sql);
+      if (!authUser) {
+        return sendJson(res, 401, { ok: false, error: 'غير مصرح بالدخول' });
+      }
+
+      if (req.method === 'GET') {
+        const rows = await sql`
+          SELECT evaluatee_id, manager_answers->'manager' as manager_data, updated_at
+          FROM m360_evaluations
+          WHERE cycle_id = '2026-Q1' AND manager_answers ? 'manager';
+        `;
+        const dataMap = {};
+        rows.forEach(r => {
+          if (r.manager_data) dataMap[r.evaluatee_id] = r.manager_data;
+        });
+        return sendJson(res, 200, { ok: true, managerEvaluations: dataMap });
+      }
+
+      if (req.method === 'POST') {
+        const body = await parseBody(req);
+        const { evaluateeId, answers, notes, isFinal } = body;
+        if (!evaluateeId) {
+          return sendJson(res, 400, { ok: false, error: 'معرّف الموظف المقيّم مطلوب' });
+        }
+
+        const managerPayload = {
+          answers: answers || {},
+          notes: notes || '',
+          isFinal: !!isFinal,
+          evaluatorId: authUser.id,
+          evaluatorName: authUser.name,
+          updatedAt: new Date().toISOString()
+        };
+
+        const cycleId = '2026-Q1';
+        await sql`
+          INSERT INTO m360_evaluations (
+            cycle_id, evaluator_id, evaluatee_id, status, progress_pct,
+            manager_answers, updated_at
+          ) VALUES (
+            ${cycleId},
+            ${authUser.id},
+            ${evaluateeId},
+            ${isFinal ? 'completed' : 'in_progress'},
+            ${isFinal ? 100 : 50},
+            ${JSON.stringify({ manager: managerPayload })}::jsonb,
+            NOW()
+          )
+          ON CONFLICT (cycle_id, evaluator_id, evaluatee_id)
+          DO UPDATE SET
+            manager_answers = jsonb_set(COALESCE(m360_evaluations.manager_answers, '{}'::jsonb), '{manager}', ${JSON.stringify(managerPayload)}::jsonb),
+            updated_at = NOW();
+        `;
+
+        return sendJson(res, 200, {
+          ok: true,
+          message: isFinal ? 'تم اعتماد تقييم المدير بنجاح ومزامنته' : 'تم حفظ مسودة تقييم المدير بنجاح',
+          data: managerPayload
+        });
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 8c. Fatima HR Evaluations Menu (/evaluations/fatima-eval)
+    // -------------------------------------------------------------------------
+    if (pathname === '/evaluations/fatima-eval' || pathname === '/fatima-eval') {
+      const authUser = await authenticateRequest(req, sql);
+      if (!authUser) {
+        return sendJson(res, 401, { ok: false, error: 'غير مصرح بالدخول' });
+      }
+
+      if (req.method === 'GET') {
+        const rows = await sql`
+          SELECT evaluatee_id, manager_answers->'fatima' as fatima_data, updated_at
+          FROM m360_evaluations
+          WHERE cycle_id = '2026-Q1' AND manager_answers ? 'fatima';
+        `;
+        const dataMap = {};
+        rows.forEach(r => {
+          if (r.fatima_data) dataMap[r.evaluatee_id] = r.fatima_data;
+        });
+        return sendJson(res, 200, { ok: true, fatimaEvaluations: dataMap });
+      }
+
+      if (req.method === 'POST') {
+        const body = await parseBody(req);
+        const { evaluateeId, answers, notes, isFinal } = body;
+        if (!evaluateeId) {
+          return sendJson(res, 400, { ok: false, error: 'معرّف الموظف المقيّم مطلوب' });
+        }
+
+        const fatimaPayload = {
+          answers: answers || {},
+          notes: notes || '',
+          isFinal: !!isFinal,
+          evaluatorId: authUser.id,
+          evaluatorName: authUser.name,
+          updatedAt: new Date().toISOString()
+        };
+
+        const cycleId = '2026-Q1';
+        await sql`
+          INSERT INTO m360_evaluations (
+            cycle_id, evaluator_id, evaluatee_id, status, progress_pct,
+            manager_answers, updated_at
+          ) VALUES (
+            ${cycleId},
+            ${authUser.id},
+            ${evaluateeId},
+            ${isFinal ? 'completed' : 'in_progress'},
+            ${isFinal ? 100 : 50},
+            ${JSON.stringify({ fatima: fatimaPayload })}::jsonb,
+            NOW()
+          )
+          ON CONFLICT (cycle_id, evaluator_id, evaluatee_id)
+          DO UPDATE SET
+            manager_answers = jsonb_set(COALESCE(m360_evaluations.manager_answers, '{}'::jsonb), '{fatima}', ${JSON.stringify(fatimaPayload)}::jsonb),
+            updated_at = NOW();
+        `;
+
+        return sendJson(res, 200, {
+          ok: true,
+          message: isFinal ? 'تم اعتماد تقييم الموارد البشرية (فاطمة) بنجاح ومزامنته' : 'تم حفظ مسودة تقييم الموارد البشرية بنجاح',
+          data: fatimaPayload
+        });
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 8d. Self Evaluation Menu (Rate Yourself) (/evaluations/self)
+    // -------------------------------------------------------------------------
+    if (pathname === '/evaluations/self' || pathname === '/self-eval') {
+      const authUser = await authenticateRequest(req, sql);
+      if (!authUser) {
+        return sendJson(res, 401, { ok: false, error: 'غير مصرح بالدخول' });
+      }
+
+      if (req.method === 'GET') {
+        const userRows = await sql`
+          SELECT id, name, channels->'self_eval' as self_eval
+          FROM m360_users
+          WHERE id = ${authUser.id};
+        `;
+        return sendJson(res, 200, {
+          ok: true,
+          selfEvaluation: userRows[0]?.self_eval || null
+        });
+      }
+
+      if (req.method === 'POST') {
+        const body = await parseBody(req);
+        const { answers, initiativeText, isFinal } = body;
+        const payload = {
+          answers: answers || {},
+          initiativeText: initiativeText || '',
+          isFinal: !!isFinal,
+          submittedAt: new Date().toISOString()
+        };
+
+        await sql`
+          UPDATE m360_users
+          SET channels = jsonb_set(COALESCE(channels, '{}'::jsonb), '{self_eval}', ${JSON.stringify(payload)}::jsonb)
+          WHERE id = ${authUser.id};
+        `;
+
+        return sendJson(res, 200, {
+          ok: true,
+          message: 'تم حفظ واعتماد التقييم الذاتي بنجاح ومزامنته',
+          selfEvaluation: payload
+        });
+      }
+    }
+
+    // -------------------------------------------------------------------------
     // 9. Analytics: Aggregated metrics & raw data for Drag-and-Drop
     // -------------------------------------------------------------------------
     if ((pathname === '/analytics' || pathname === '/analytics/') && req.method === 'GET') {

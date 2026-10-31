@@ -41,6 +41,20 @@ let colleaguesFilter = 'all';
 let currentHrTab = 'overview';
 let selectedHrEmployeeId = 1;
 
+// Dedicated Evaluation Menus State (PDF Specs)
+let currentActiveEvalMenu = 'peers';
+let selectedManagerTargetId = 4; // Ahmed Tarek
+let selectedFatimaTargetId = 1;  // Hazem Khaled
+let MANAGER_EVAL_DATA = {};
+let FATIMA_EVAL_DATA = {};
+let SELF_EVAL_DATA = {};
+
+try {
+  MANAGER_EVAL_DATA = JSON.parse(localStorage.getItem('m360_manager_evals') || '{}');
+  FATIMA_EVAL_DATA = JSON.parse(localStorage.getItem('m360_fatima_evals') || '{}');
+  SELF_EVAL_DATA = JSON.parse(localStorage.getItem('m360_self_evals') || '{}');
+} catch(e) {}
+
 // Drag & Drop State in HR Studio
 let ddState = {
   chartType: 'bar',
@@ -198,8 +212,28 @@ async function loadRemoteEvaluations() {
         });
         saveEvalData();
         updateCloudStatusBadge(true, 'متصل بالسحابة (مزامنة فورية)');
-        return;
       }
+    }
+
+    // Sync Manager, Fatima, and Self evaluations from API
+    try {
+      const mgrRes = await apiCall('/evaluations/manager-eval');
+      if (mgrRes.ok && mgrRes.data && mgrRes.data.managerEvaluations) {
+        MANAGER_EVAL_DATA = mgrRes.data.managerEvaluations;
+        localStorage.setItem('m360_manager_evals', JSON.stringify(MANAGER_EVAL_DATA));
+      }
+      const fatimaRes = await apiCall('/evaluations/fatima-eval');
+      if (fatimaRes.ok && fatimaRes.data && fatimaRes.data.fatimaEvaluations) {
+        FATIMA_EVAL_DATA = fatimaRes.data.fatimaEvaluations;
+        localStorage.setItem('m360_fatima_evals', JSON.stringify(FATIMA_EVAL_DATA));
+      }
+      const selfRes = await apiCall('/evaluations/self');
+      if (selfRes.ok && selfRes.data && selfRes.data.selfEvaluation) {
+        SELF_EVAL_DATA = selfRes.data.selfEvaluation;
+        localStorage.setItem('m360_self_evals', JSON.stringify(SELF_EVAL_DATA));
+      }
+    } catch (e) {
+      console.warn('Sub-evaluations sync notice:', e);
     }
   } catch (err) {
     console.warn('Sync failed, continuing with local data:', err);
@@ -519,6 +553,41 @@ function renderEmployeeDashboard() {
   name.innerText = `${currentUser.name} (${currentUser.role})`;
   welcome.innerText = `مرحباً بك، ${currentUser.name} 👋`;
 
+  // Update nav buttons to match currentActiveEvalMenu
+  document.querySelectorAll('.eval-tab-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById(`tab-btn-${currentActiveEvalMenu}`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  if (currentActiveEvalMenu === 'managers') {
+    document.querySelectorAll('.eval-view').forEach(v => { v.classList.remove('active'); v.style.display = 'none'; });
+    const mgrView = document.getElementById('eval-view-managers');
+    if (mgrView) { mgrView.classList.add('active'); mgrView.style.display = 'block'; }
+    renderManagerMenu();
+    return;
+  }
+  if (currentActiveEvalMenu === 'fatima') {
+    document.querySelectorAll('.eval-view').forEach(v => { v.classList.remove('active'); v.style.display = 'none'; });
+    const fatView = document.getElementById('eval-view-fatima');
+    if (fatView) { fatView.classList.add('active'); fatView.style.display = 'block'; }
+    renderFatimaMenu();
+    return;
+  }
+  if (currentActiveEvalMenu === 'self') {
+    document.querySelectorAll('.eval-view').forEach(v => { v.classList.remove('active'); v.style.display = 'none'; });
+    const selfView = document.getElementById('eval-view-self');
+    if (selfView) { selfView.classList.add('active'); selfView.style.display = 'block'; }
+    renderSelfMenu();
+    return;
+  }
+
+  // Ensure peers view is active
+  document.querySelectorAll('.eval-view').forEach(v => { v.classList.remove('active'); v.style.display = 'none'; });
+  const peersView = document.getElementById('eval-view-peers');
+  if (peersView) {
+    peersView.classList.add('active');
+    peersView.style.display = 'block';
+  }
+
   // Filter peers (Excluding self strictly)
   const peers = EMPLOYEES.filter(e => e.id !== currentUser.id);
   const total = peers.length; // 16 peers
@@ -659,6 +728,734 @@ function showCompletedConfidentialModal(name) {
     </div>
   `;
   openModal('التقييم مكتمل ومغلق بسرية', body, '');
+}
+
+// =========================================================
+// Dedicated Evaluation Menus (Specs from PDF)
+// 1. استبيان تقييم الزملاء (360°)
+// 2. قائمة تقييم المديرين (طارق وهاشم)
+// 3. قائمة تقييم الموارد البشرية (فاطمة)
+// 4. قائمة قيّم نفسك (التقييم الذاتي للموظف Rate Yourself)
+// =========================================================
+
+function switchEvalMenu(menuKey, btnEl) {
+  currentActiveEvalMenu = menuKey;
+
+  // Update tabs
+  document.querySelectorAll('.eval-tab-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = btnEl || document.getElementById(`tab-btn-${menuKey}`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  // Toggle views
+  document.querySelectorAll('.eval-view').forEach(v => {
+    v.classList.remove('active');
+    v.style.display = 'none';
+  });
+
+  const targetView = document.getElementById(`eval-view-${menuKey}`);
+  if (targetView) {
+    targetView.classList.add('active');
+    targetView.style.display = 'block';
+  }
+
+  if (menuKey === 'peers') {
+    renderEmployeeDashboard();
+  } else if (menuKey === 'managers') {
+    renderManagerMenu();
+  } else if (menuKey === 'fatima') {
+    renderFatimaMenu();
+  } else if (menuKey === 'self') {
+    renderSelfMenu();
+  }
+}
+
+function switchToEvalMenuFromHR(menuKey) {
+  if (currentUser && (currentUser.isHRAdmin || currentUser.email === 'mahmoud@tieapps.com' || currentUser.id === 0 || currentUser.id === 99)) {
+    realAdminUser = currentUser;
+  }
+  showScreen('screen-dashboard');
+  switchEvalMenu(menuKey);
+}
+
+function getStepperWidth(currentVal) {
+  if (!currentVal || currentVal < 1 || currentVal > 5) return '0%';
+  return `${((currentVal - 1) / 4) * 100}%`;
+}
+
+function getStepLabel(stepVal) {
+  switch (stepVal) {
+    case 1: return 'ضعيف جداً / لا يلبي';
+    case 2: return 'يحتاج تحسين';
+    case 3: return 'يلبي التوقعات';
+    case 4: return 'يفوق التوقعات';
+    case 5: return 'أداء متميز';
+    default: return '';
+  }
+}
+
+function formatScorePill(score) {
+  if (score === undefined || score === null) return '<span style="color:var(--text-light);">-</span>';
+  if (score === 0 || score === 'na') return '<span class="status-badge" style="background:#F1F5F9;color:#64748B;">لا ينطبق</span>';
+  return `<span class="score-pill s${score}">${score} / 5</span>`;
+}
+
+// ---------------------------------------------------------
+// 2. قائمة تقييم المديرين (طارق وهاشم)
+// ---------------------------------------------------------
+function renderManagerMenu(targetEmpId) {
+  const container = document.getElementById('eval-view-managers');
+  if (!container) return;
+
+  if (targetEmpId) {
+    selectedManagerTargetId = parseInt(targetEmpId, 10);
+  }
+
+  const target = EMPLOYEES.find(e => e.id === selectedManagerTargetId) || EMPLOYEES[0];
+  const evalRecord = MANAGER_EVAL_DATA[target.id] || { answers: {}, notes: '', isFinal: false };
+  const answers = evalRecord.answers || {};
+
+  const completedCount = Object.values(MANAGER_EVAL_DATA).filter(v => v.isFinal).length;
+  const inProgressCount = Object.values(MANAGER_EVAL_DATA).filter(v => !v.isFinal && Object.keys(v.answers || {}).length > 0).length;
+
+  container.innerHTML = `
+    <!-- Hero Banner -->
+    <div class="eval-hero-banner">
+      <div class="eval-hero-info">
+        <h2><span>👔</span> قائمة تقييم المديرين (طارق وهاشم)</h2>
+        <p>التركيز على المقاييس التشغيلية الدقيقة، ومعدلات وقت الحل (SLA)، والتعامل مع الأزمات والضغط الفجائي (Peak)، وجودة التوثيق والعمل الجماعي.</p>
+      </div>
+      <div class="eval-hero-stats">
+        <div class="eval-hero-stat-pill">
+          <span class="eval-hero-stat-val">${completedCount} / 17</span>
+          <span class="eval-hero-stat-lbl">تقييم معتمد</span>
+        </div>
+        <div class="eval-hero-stat-pill">
+          <span class="eval-hero-stat-val">${inProgressCount}</span>
+          <span class="eval-hero-stat-lbl">قيد التقييم</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Employee Picker Carousel -->
+    <div class="eval-emp-picker-section">
+      <div class="eval-emp-picker-header">
+        <span>اختر الموظف للتقييم الإداري (17 موظفاً):</span>
+        <span style="font-size:0.75rem;color:var(--text-muted);">انقر على الموظف لفتح خانات التقييم المباشر</span>
+      </div>
+      <div class="eval-emp-chips-scroll">
+        ${EMPLOYEES.map(emp => {
+          const isSelected = emp.id === target.id;
+          const empEval = MANAGER_EVAL_DATA[emp.id];
+          const isDone = empEval && empEval.isFinal;
+          const hasDraft = empEval && !empEval.isFinal && Object.keys(empEval.answers || {}).length > 0;
+          const dotColor = isDone ? '#10B981' : (hasDraft ? '#F59E0B' : '#CBD5E1');
+          return `
+            <div class="eval-emp-chip ${isSelected ? 'selected' : ''}" onclick="renderManagerMenu(${emp.id})">
+              <span class="eval-emp-chip-status" style="background:${dotColor};"></span>
+              <div class="eval-emp-chip-avatar" style="background:${getEmployeeColor(emp)};">${getInitials(emp.name)}</div>
+              <div>
+                <div class="eval-emp-chip-name">${emp.name}</div>
+                <div class="eval-emp-chip-role">${emp.role} • ${emp.team}</div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- Form Box for Selected Employee -->
+    <div class="eval-form-box">
+      <div class="eval-selected-emp-card">
+        <div class="eval-emp-left-profile">
+          <div class="eval-emp-large-avatar" style="background:${getEmployeeColor(target)};">
+            ${getInitials(target.name)}
+          </div>
+          <div class="eval-emp-details">
+            <h3>تقييم المدير للموظف: ${target.name}</h3>
+            <p>${target.role} | فريق ${target.team} | ${target.email}</p>
+          </div>
+        </div>
+        <div>
+          ${evalRecord.isFinal 
+            ? '<span class="status-badge badge-completed" style="font-size:0.85rem;padding:6px 16px;">✓ تم اعتماد التقييم النهائي للمدير</span>'
+            : (Object.keys(answers).length > 0
+                ? '<span class="status-badge badge-in-progress" style="font-size:0.85rem;padding:6px 16px;">⏳ مسودة محفوظة سحابياً</span>'
+                : '<span class="status-badge badge-not-started" style="font-size:0.85rem;padding:6px 16px;">📝 بانتظار تقييم المدير</span>')
+          }
+        </div>
+      </div>
+
+      <!-- Question Cards (4 fields from MANAGER_EVAL_QUESTIONS) -->
+      <div class="eval-fields-wrapper">
+        ${MANAGER_EVAL_QUESTIONS.map(q => {
+          const currentVal = answers[q.id];
+          const isAnswered = currentVal !== undefined && currentVal !== null;
+          const isNA = currentVal === 0 || currentVal === 'na';
+          return `
+            <div class="q-compact-card ${isAnswered ? 'answered' : ''}">
+              <div class="q-card-header">
+                <div class="q-card-tag">
+                  <span>${q.icon}</span>
+                  <span>الخانة ${q.num} من 4: ${q.title}</span>
+                </div>
+                <span class="q-status-badge ${isAnswered ? 'done' : 'pending'}">
+                  ${isAnswered ? 'تم التقييم ✓' : 'بانتظار التقييم'}
+                </span>
+              </div>
+              <div class="q-prompt-title">${q.text}</div>
+
+              <!-- 1-5 Horizontal Stepper -->
+              <div class="stepper-container">
+                <div class="stepper-line-bg"></div>
+                <div class="stepper-line-fill" style="width: ${getStepperWidth(currentVal)};"></div>
+                <div class="stepper-steps-row">
+                  ${[1, 2, 3, 4, 5].map(stepVal => {
+                    const isActive = currentVal === stepVal;
+                    return `
+                      <div class="stepper-step-col ${isActive ? 'active' : ''}" onclick="setManagerRating('${q.id}', ${stepVal}, ${target.id})">
+                        <div class="stepper-circle">${stepVal}</div>
+                        <div class="stepper-step-label">${getStepLabel(stepVal)}</div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+                <!-- N/A Option -->
+                <div class="stepper-na-row">
+                  <div class="stepper-na-pill ${isNA ? 'active' : ''}" onclick="setManagerRating('${q.id}', 0, ${target.id})">
+                    <span class="stepper-na-dot"></span>
+                    <span>لا ينطبق / لا أملك معلومات كافية</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+
+        <!-- Notes Field (Card 5) -->
+        <div class="q-compact-card">
+          <div class="q-card-header">
+            <div class="q-card-tag">
+              <span>📝</span>
+              <span>الخانة 5: خانة التوجيهات والملاحظات التشغيلية للمدير المباشر</span>
+            </div>
+          </div>
+          <div class="q-prompt-title">أضف أي ملاحظات تفصيلية أو توجيهات تشغيلية للموظف حول إدارة التذاكر وحل المشكلات:</div>
+          <textarea id="mgr-notes-input" class="text-answer" placeholder="اكتب الملاحظات والتوجيهات هنا..." oninput="updateManagerNotes(${target.id}, this.value)">${evalRecord.notes || ''}</textarea>
+        </div>
+      </div>
+
+      <!-- Actions Bar -->
+      <div class="eval-actions-bar">
+        <button class="btn btn-outline" onclick="saveManagerDraft(${target.id})">💾 حفظ المسودة سحابياً</button>
+        <button class="btn btn-primary" onclick="submitManagerFinal(${target.id})">🚀 اعتماد التقييم النهائي للمدير</button>
+      </div>
+    </div>
+
+    <!-- Overview Table for all 17 employees -->
+    <div class="eval-table-section">
+      <div class="eval-table-title">
+        <span>📊</span>
+        <span>جدول متابعة تقييم المديرين (طارق وهاشم) لجميع موظفي الشركة (17 موظفاً):</span>
+      </div>
+      <div class="completion-table">
+        <table>
+          <thead>
+            <tr>
+              <th>الموظف</th>
+              <th>الوظيفة والفريق</th>
+              <th>وقت الحل (SLA)</th>
+              <th>إدارة الأزمات (Peak)</th>
+              <th>جودة التوثيق</th>
+              <th>العمل الجماعي</th>
+              <th>الحالة</th>
+              <th>الإجراء</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${EMPLOYEES.map(emp => {
+              const rec = MANAGER_EVAL_DATA[emp.id] || {};
+              const ans = rec.answers || {};
+              const isDone = rec.isFinal;
+              const hasDraft = !isDone && Object.keys(ans).length > 0;
+              const statusPill = isDone 
+                ? '<span class="status-badge badge-completed">معتمد ✓</span>'
+                : (hasDraft ? '<span class="status-badge badge-in-progress">مسودة ⏳</span>' : '<span class="status-badge badge-not-started">لم يبدأ</span>');
+              return `
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <div style="width:28px;height:28px;border-radius:6px;background:${getEmployeeColor(emp)};color:white;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;">${getInitials(emp.name)}</div>
+                      <strong>${emp.name}</strong>
+                    </div>
+                  </td>
+                  <td>${emp.role} (${emp.team})</td>
+                  <td>${formatScorePill(ans.mgr_sla)}</td>
+                  <td>${formatScorePill(ans.mgr_crisis)}</td>
+                  <td>${formatScorePill(ans.mgr_documentation)}</td>
+                  <td>${formatScorePill(ans.mgr_teamwork)}</td>
+                  <td>${statusPill}</td>
+                  <td>
+                    <button class="btn btn-sm ${isDone ? 'btn-ghost' : 'btn-outline'}" onclick="renderManagerMenu(${emp.id}); window.scrollTo({top: 180, behavior: 'smooth'});">
+                      ${isDone ? 'عرض التقييم' : 'تقييم الآن ←'}
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function setManagerRating(fieldId, val, targetEmpId) {
+  if (!MANAGER_EVAL_DATA[targetEmpId]) {
+    MANAGER_EVAL_DATA[targetEmpId] = { answers: {}, notes: '', isFinal: false };
+  }
+  MANAGER_EVAL_DATA[targetEmpId].answers[fieldId] = val;
+  localStorage.setItem('m360_manager_evals', JSON.stringify(MANAGER_EVAL_DATA));
+  renderManagerMenu(targetEmpId);
+}
+
+function updateManagerNotes(targetEmpId, notes) {
+  if (!MANAGER_EVAL_DATA[targetEmpId]) {
+    MANAGER_EVAL_DATA[targetEmpId] = { answers: {}, notes: '', isFinal: false };
+  }
+  MANAGER_EVAL_DATA[targetEmpId].notes = notes;
+  localStorage.setItem('m360_manager_evals', JSON.stringify(MANAGER_EVAL_DATA));
+}
+
+async function saveManagerDraft(targetEmpId) {
+  const rec = MANAGER_EVAL_DATA[targetEmpId] || { answers: {}, notes: '', isFinal: false };
+  rec.isFinal = false;
+  localStorage.setItem('m360_manager_evals', JSON.stringify(MANAGER_EVAL_DATA));
+  showToast('جاري حفظ مسودة تقييم المدير سحابياً...');
+  try {
+    await apiCall('/evaluations/manager-eval', 'POST', {
+      evaluateeId: targetEmpId,
+      answers: rec.answers,
+      notes: rec.notes,
+      isFinal: false
+    });
+    showToast('تم حفظ مسودة تقييم المدير سحابياً بنجاح ✓');
+  } catch(e) {
+    showToast('تم حفظ المسودة محلياً بنجاح ✓');
+  }
+  renderManagerMenu(targetEmpId);
+}
+
+async function submitManagerFinal(targetEmpId) {
+  const rec = MANAGER_EVAL_DATA[targetEmpId] || { answers: {}, notes: '', isFinal: false };
+  rec.isFinal = true;
+  localStorage.setItem('m360_manager_evals', JSON.stringify(MANAGER_EVAL_DATA));
+  showToast('جاري اعتماد تقييم المدير سحابياً...');
+  try {
+    await apiCall('/evaluations/manager-eval', 'POST', {
+      evaluateeId: targetEmpId,
+      answers: rec.answers,
+      notes: rec.notes,
+      isFinal: true
+    });
+    showToast('تم اعتماد التقييم النهائي للمدير بنجاح ومزامنته 🚀');
+  } catch(e) {
+    showToast('تم اعتماد التقييم النهائي بنجاح ✓');
+  }
+  renderManagerMenu(targetEmpId);
+}
+
+// ---------------------------------------------------------
+// 3. قائمة تقييم الموارد البشرية والشؤون الإدارية (فاطمة)
+// ---------------------------------------------------------
+function renderFatimaMenu(targetEmpId) {
+  const container = document.getElementById('eval-view-fatima');
+  if (!container) return;
+
+  if (targetEmpId) {
+    selectedFatimaTargetId = parseInt(targetEmpId, 10);
+  }
+
+  const target = EMPLOYEES.find(e => e.id === selectedFatimaTargetId) || EMPLOYEES[0];
+  const evalRecord = FATIMA_EVAL_DATA[target.id] || { answers: {}, notes: '', isFinal: false };
+  const answers = evalRecord.answers || {};
+
+  const completedCount = Object.values(FATIMA_EVAL_DATA).filter(v => v.isFinal).length;
+  const inProgressCount = Object.values(FATIMA_EVAL_DATA).filter(v => !v.isFinal && Object.keys(v.answers || {}).length > 0).length;
+
+  container.innerHTML = `
+    <!-- Hero Banner -->
+    <div class="eval-hero-banner fatima-theme">
+      <div class="eval-hero-info">
+        <h2><span>📋</span> قائمة تقييم الموارد البشرية والشؤون الإدارية (فاطمة)</h2>
+        <p>قياس الاستقرار، المرونة في الطوارئ والمناوبات الاستثنائية، الالتزام بمعايير وثقافة شركة سماء الحلول، والجاهزية والاستجابة الإدارية.</p>
+      </div>
+      <div class="eval-hero-stats">
+        <div class="eval-hero-stat-pill">
+          <span class="eval-hero-stat-val">${completedCount} / 17</span>
+          <span class="eval-hero-stat-lbl">تقييم معتمد</span>
+        </div>
+        <div class="eval-hero-stat-pill">
+          <span class="eval-hero-stat-val">${inProgressCount}</span>
+          <span class="eval-hero-stat-lbl">قيد التقييم</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Employee Picker Carousel -->
+    <div class="eval-emp-picker-section">
+      <div class="eval-emp-picker-header">
+        <span>اختر الموظف لتقييم الموارد البشرية (17 موظفاً):</span>
+        <span style="font-size:0.75rem;color:var(--text-muted);">انقر على الموظف لفتح خانات التقييم الإداري</span>
+      </div>
+      <div class="eval-emp-chips-scroll">
+        ${EMPLOYEES.map(emp => {
+          const isSelected = emp.id === target.id;
+          const empEval = FATIMA_EVAL_DATA[emp.id];
+          const isDone = empEval && empEval.isFinal;
+          const hasDraft = empEval && !empEval.isFinal && Object.keys(empEval.answers || {}).length > 0;
+          const dotColor = isDone ? '#10B981' : (hasDraft ? '#F59E0B' : '#CBD5E1');
+          return `
+            <div class="eval-emp-chip ${isSelected ? 'selected' : ''}" onclick="renderFatimaMenu(${emp.id})">
+              <span class="eval-emp-chip-status" style="background:${dotColor};"></span>
+              <div class="eval-emp-chip-avatar" style="background:${getEmployeeColor(emp)};">${getInitials(emp.name)}</div>
+              <div>
+                <div class="eval-emp-chip-name">${emp.name}</div>
+                <div class="eval-emp-chip-role">${emp.role} • ${emp.team}</div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- Form Box for Selected Employee -->
+    <div class="eval-form-box">
+      <div class="eval-selected-emp-card">
+        <div class="eval-emp-left-profile">
+          <div class="eval-emp-large-avatar" style="background:${getEmployeeColor(target)};">
+            ${getInitials(target.name)}
+          </div>
+          <div class="eval-emp-details">
+            <h3>تقييم الموارد البشرية (فاطمة) للموظف: ${target.name}</h3>
+            <p>${target.role} | فريق ${target.team} | ${target.email}</p>
+          </div>
+        </div>
+        <div>
+          ${evalRecord.isFinal 
+            ? '<span class="status-badge badge-completed" style="font-size:0.85rem;padding:6px 16px;">✓ تم اعتماد تقييم الموارد البشرية النهائي</span>'
+            : (Object.keys(answers).length > 0
+                ? '<span class="status-badge badge-in-progress" style="font-size:0.85rem;padding:6px 16px;">⏳ مسودة محفوظة سحابياً</span>'
+                : '<span class="status-badge badge-not-started" style="font-size:0.85rem;padding:6px 16px;">📝 بانتظار تقييم الموارد البشرية</span>')
+          }
+        </div>
+      </div>
+
+      <!-- Question Cards (3 fields from FATIMA_HR_QUESTIONS) -->
+      <div class="eval-fields-wrapper">
+        ${FATIMA_HR_QUESTIONS.map(q => {
+          const currentVal = answers[q.id];
+          const isAnswered = currentVal !== undefined && currentVal !== null;
+          const isNA = currentVal === 0 || currentVal === 'na';
+          return `
+            <div class="q-compact-card ${isAnswered ? 'answered' : ''}">
+              <div class="q-card-header">
+                <div class="q-card-tag">
+                  <span>${q.icon}</span>
+                  <span>الخانة ${q.num} من 3: ${q.title}</span>
+                </div>
+                <span class="q-status-badge ${isAnswered ? 'done' : 'pending'}">
+                  ${isAnswered ? 'تم التقييم ✓' : 'بانتظار التقييم'}
+                </span>
+              </div>
+              <div class="q-prompt-title">${q.text}</div>
+
+              <!-- 1-5 Horizontal Stepper -->
+              <div class="stepper-container">
+                <div class="stepper-line-bg"></div>
+                <div class="stepper-line-fill" style="width: ${getStepperWidth(currentVal)};"></div>
+                <div class="stepper-steps-row">
+                  ${[1, 2, 3, 4, 5].map(stepVal => {
+                    const isActive = currentVal === stepVal;
+                    return `
+                      <div class="stepper-step-col ${isActive ? 'active' : ''}" onclick="setFatimaRating('${q.id}', ${stepVal}, ${target.id})">
+                        <div class="stepper-circle">${stepVal}</div>
+                        <div class="stepper-step-label">${getStepLabel(stepVal)}</div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+                <!-- N/A Option -->
+                <div class="stepper-na-row">
+                  <div class="stepper-na-pill ${isNA ? 'active' : ''}" onclick="setFatimaRating('${q.id}', 0, ${target.id})">
+                    <span class="stepper-na-dot"></span>
+                    <span>لا ينطبق / لا أملك معلومات كافية</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+
+        <!-- Notes Field (Card 4) -->
+        <div class="q-compact-card">
+          <div class="q-card-header">
+            <div class="q-card-tag">
+              <span>📝</span>
+              <span>الخانة 4: خانة الملاحظات الإدارية وتوصية الموارد البشرية</span>
+            </div>
+          </div>
+          <div class="q-prompt-title">أضف تقرير وتوصية الموارد البشرية حول الموظف (سلوك، انضباط، استقرار، التزام):</div>
+          <textarea id="fatima-notes-input" class="text-answer" placeholder="اكتب الملاحظات والتوصية الإدارية هنا..." oninput="updateFatimaNotes(${target.id}, this.value)">${evalRecord.notes || ''}</textarea>
+        </div>
+      </div>
+
+      <!-- Actions Bar -->
+      <div class="eval-actions-bar">
+        <button class="btn btn-outline" onclick="saveFatimaDraft(${target.id})">💾 حفظ المسودة سحابياً</button>
+        <button class="btn btn-primary" onclick="submitFatimaFinal(${target.id})">🚀 اعتماد تقييم الموارد البشرية النهائي</button>
+      </div>
+    </div>
+
+    <!-- Overview Table for all 17 employees -->
+    <div class="eval-table-section">
+      <div class="eval-table-title">
+        <span>📊</span>
+        <span>جدول متابعة تقييم الموارد البشرية (فاطمة) لجميع موظفي الشركة (17 موظفاً):</span>
+      </div>
+      <div class="completion-table">
+        <table>
+          <thead>
+            <tr>
+              <th>الموظف</th>
+              <th>الوظيفة والفريق</th>
+              <th>ثقافة سماء الحلول</th>
+              <th>المرونة في الطوارئ</th>
+              <th>الجاهزية والاستجابة</th>
+              <th>الحالة</th>
+              <th>الإجراء</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${EMPLOYEES.map(emp => {
+              const rec = FATIMA_EVAL_DATA[emp.id] || {};
+              const ans = rec.answers || {};
+              const isDone = rec.isFinal;
+              const hasDraft = !isDone && Object.keys(ans).length > 0;
+              const statusPill = isDone 
+                ? '<span class="status-badge badge-completed">معتمد ✓</span>'
+                : (hasDraft ? '<span class="status-badge badge-in-progress">مسودة ⏳</span>' : '<span class="status-badge badge-not-started">لم يبدأ</span>');
+              return `
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <div style="width:28px;height:28px;border-radius:6px;background:${getEmployeeColor(emp)};color:white;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;">${getInitials(emp.name)}</div>
+                      <strong>${emp.name}</strong>
+                    </div>
+                  </td>
+                  <td>${emp.role} (${emp.team})</td>
+                  <td>${formatScorePill(ans.hr_culture)}</td>
+                  <td>${formatScorePill(ans.hr_emergency)}</td>
+                  <td>${formatScorePill(ans.hr_readiness)}</td>
+                  <td>${statusPill}</td>
+                  <td>
+                    <button class="btn btn-sm ${isDone ? 'btn-ghost' : 'btn-outline'}" onclick="renderFatimaMenu(${emp.id}); window.scrollTo({top: 180, behavior: 'smooth'});">
+                      ${isDone ? 'عرض التقييم' : 'تقييم الآن ←'}
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function setFatimaRating(fieldId, val, targetEmpId) {
+  if (!FATIMA_EVAL_DATA[targetEmpId]) {
+    FATIMA_EVAL_DATA[targetEmpId] = { answers: {}, notes: '', isFinal: false };
+  }
+  FATIMA_EVAL_DATA[targetEmpId].answers[fieldId] = val;
+  localStorage.setItem('m360_fatima_evals', JSON.stringify(FATIMA_EVAL_DATA));
+  renderFatimaMenu(targetEmpId);
+}
+
+function updateFatimaNotes(targetEmpId, notes) {
+  if (!FATIMA_EVAL_DATA[targetEmpId]) {
+    FATIMA_EVAL_DATA[targetEmpId] = { answers: {}, notes: '', isFinal: false };
+  }
+  FATIMA_EVAL_DATA[targetEmpId].notes = notes;
+  localStorage.setItem('m360_fatima_evals', JSON.stringify(FATIMA_EVAL_DATA));
+}
+
+async function saveFatimaDraft(targetEmpId) {
+  const rec = FATIMA_EVAL_DATA[targetEmpId] || { answers: {}, notes: '', isFinal: false };
+  rec.isFinal = false;
+  localStorage.setItem('m360_fatima_evals', JSON.stringify(FATIMA_EVAL_DATA));
+  showToast('جاري حفظ مسودة تقييم الموارد البشرية سحابياً...');
+  try {
+    await apiCall('/evaluations/fatima-eval', 'POST', {
+      evaluateeId: targetEmpId,
+      answers: rec.answers,
+      notes: rec.notes,
+      isFinal: false
+    });
+    showToast('تم حفظ مسودة تقييم الموارد البشرية سحابياً بنجاح ✓');
+  } catch(e) {
+    showToast('تم حفظ المسودة محلياً بنجاح ✓');
+  }
+  renderFatimaMenu(targetEmpId);
+}
+
+async function submitFatimaFinal(targetEmpId) {
+  const rec = FATIMA_EVAL_DATA[targetEmpId] || { answers: {}, notes: '', isFinal: false };
+  rec.isFinal = true;
+  localStorage.setItem('m360_fatima_evals', JSON.stringify(FATIMA_EVAL_DATA));
+  showToast('جاري اعتماد تقييم الموارد البشرية سحابياً...');
+  try {
+    await apiCall('/evaluations/fatima-eval', 'POST', {
+      evaluateeId: targetEmpId,
+      answers: rec.answers,
+      notes: rec.notes,
+      isFinal: true
+    });
+    showToast('تم اعتماد تقييم الموارد البشرية النهائي بنجاح ومزامنته 🚀');
+  } catch(e) {
+    showToast('تم اعتماد التقييم النهائي بنجاح ✓');
+  }
+  renderFatimaMenu(targetEmpId);
+}
+
+// ---------------------------------------------------------
+// 4. قائمة قيّم نفسك (التقييم الذاتي للموظف Rate Yourself)
+// ---------------------------------------------------------
+function renderSelfMenu() {
+  const container = document.getElementById('eval-view-self');
+  if (!container || !currentUser) return;
+
+  const answers = SELF_EVAL_DATA.answers || {};
+  const initiativeText = SELF_EVAL_DATA.initiativeText || '';
+  const isFinal = !!SELF_EVAL_DATA.isFinal;
+
+  container.innerHTML = `
+    <!-- Hero Banner -->
+    <div class="eval-hero-banner self-theme">
+      <div class="eval-hero-info">
+        <h2><span>🌟</span> قائمة قيّم نفسك — التقييم الذاتي للموظف (Rate Yourself)</h2>
+        <p>قياس شعورك بالمسؤولية، قدرتك على إدارة الضغط وتذاكر العملاء المتزامنة دون الإخلال بالجودة، والتعلم المستمر والمبادرات الاستباقية.</p>
+      </div>
+      <div class="eval-hero-stats">
+        <div class="eval-hero-stat-pill">
+          <span class="eval-hero-stat-val">${isFinal ? 'مكتمل ✓' : (Object.keys(answers).length > 0 ? 'قيد الإجراء ⏳' : 'لم يبدأ 📝')}</span>
+          <span class="eval-hero-stat-lbl">حالة تقييمك الذاتي</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Box for Current User -->
+    <div class="eval-form-box">
+      <div class="eval-selected-emp-card">
+        <div class="eval-emp-left-profile">
+          <div class="eval-emp-large-avatar" style="background:${getEmployeeColor(currentUser)};">
+            ${getInitials(currentUser.name)}
+          </div>
+          <div class="eval-emp-details">
+            <h3>التقييم الذاتي للموظف: ${currentUser.name}</h3>
+            <p>${currentUser.role} | فريق ${currentUser.team} | ${currentUser.email}</p>
+          </div>
+        </div>
+        <div>
+          ${isFinal 
+            ? '<span class="status-badge badge-completed" style="font-size:0.85rem;padding:6px 16px;">✓ تم حفظ واعتماد التقييم الذاتي</span>'
+            : '<span class="status-badge badge-in-progress" style="font-size:0.85rem;padding:6px 16px;">📝 قيّم أداءك هذا الشهر بموضوعية</span>'
+          }
+        </div>
+      </div>
+
+      <!-- Question Cards (3 fields from SELF_EVAL_QUESTIONS) -->
+      <div class="eval-fields-wrapper">
+        ${SELF_EVAL_QUESTIONS.map(q => {
+          const currentVal = answers[q.id];
+          const isAnswered = currentVal !== undefined && currentVal !== null;
+          return `
+            <div class="q-compact-card ${isAnswered ? 'answered' : ''}">
+              <div class="q-card-header">
+                <div class="q-card-tag">
+                  <span>${q.icon}</span>
+                  <span>الخانة ${q.num} من 3: ${q.title}</span>
+                </div>
+                <span class="q-status-badge ${isAnswered ? 'done' : 'pending'}">
+                  ${isAnswered ? 'تم التقييم ✓' : 'بانتظار التقييم'}
+                </span>
+              </div>
+              <div class="q-prompt-title">${q.text}</div>
+
+              <!-- 1-5 Horizontal Stepper -->
+              <div class="stepper-container">
+                <div class="stepper-line-bg"></div>
+                <div class="stepper-line-fill" style="width: ${getStepperWidth(currentVal)};"></div>
+                <div class="stepper-steps-row">
+                  ${[1, 2, 3, 4, 5].map(stepVal => {
+                    const isActive = currentVal === stepVal;
+                    return `
+                      <div class="stepper-step-col ${isActive ? 'active' : ''}" onclick="setSelfRating('${q.id}', ${stepVal})">
+                        <div class="stepper-circle">${stepVal}</div>
+                        <div class="stepper-step-label">${getStepLabel(stepVal)}</div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
+              ${q.detailQuestion ? `
+                <div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--border);">
+                  <label style="display:block;font-size:0.86rem;font-weight:700;color:var(--text);margin-bottom:8px;">
+                    ${q.detailQuestion}
+                  </label>
+                  <textarea class="text-answer" placeholder="اشرح مبادرتك بالتفصيل هنا..." oninput="updateSelfInitiativeText(this.value)">${initiativeText}</textarea>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <!-- Actions Bar -->
+      <div class="eval-actions-bar">
+        <button class="btn btn-primary btn-lg" onclick="saveSelfEvaluation()">💾 حفظ واعتماد التقييم الذاتي سحابياً</button>
+      </div>
+    </div>
+  `;
+}
+
+function setSelfRating(fieldId, val) {
+  if (!SELF_EVAL_DATA.answers) SELF_EVAL_DATA.answers = {};
+  SELF_EVAL_DATA.answers[fieldId] = val;
+  localStorage.setItem('m360_self_evals', JSON.stringify(SELF_EVAL_DATA));
+  renderSelfMenu();
+}
+
+function updateSelfInitiativeText(text) {
+  SELF_EVAL_DATA.initiativeText = text;
+  localStorage.setItem('m360_self_evals', JSON.stringify(SELF_EVAL_DATA));
+}
+
+async function saveSelfEvaluation() {
+  SELF_EVAL_DATA.isFinal = true;
+  localStorage.setItem('m360_self_evals', JSON.stringify(SELF_EVAL_DATA));
+  showToast('جاري حفظ واعتماد التقييم الذاتي سحابياً...');
+  try {
+    await apiCall('/evaluations/self', 'POST', {
+      answers: SELF_EVAL_DATA.answers,
+      initiativeText: SELF_EVAL_DATA.initiativeText,
+      isFinal: true
+    });
+    showToast('تم حفظ واعتماد تقييمك الذاتي بنجاح ومزامنته 🌟');
+  } catch(e) {
+    showToast('تم حفظ التقييم الذاتي محلياً بنجاح ✓');
+  }
+  renderSelfMenu();
 }
 
 // =========================================================

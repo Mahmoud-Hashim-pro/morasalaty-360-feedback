@@ -291,7 +291,102 @@ async function runTests() {
     assert.strictEqual(adminAnalytics.data.nextOneStats.totalAnswered, 1);
     console.log('   ✅ Admin / Platform Owner access to /api/analytics authorized (8 modules verified)!');
 
-    console.log('\n🎉 ALL 9 COMPREHENSIVE INTEGRATION & CONFIDENTIALITY TESTS PASSED WITH 100% SUCCESS!');
+    // 10. Manager Evaluations Menu API
+    console.log('🔟 Testing /api/evaluations/manager-eval (Tariq & Hashim)...');
+    const mgrPost = await request({
+      hostname: 'localhost',
+      port: PORT,
+      path: '/api/evaluations/manager-eval',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      }
+    }, {
+      evaluateeId: 4,
+      answers: { mgr_sla: 5, mgr_crisis: 4, mgr_documentation: 5, mgr_teamwork: 4 },
+      notes: 'أداء تشغيلي ممتاز والتزام قوي بـ SLA',
+      isFinal: true
+    });
+    assert.strictEqual(mgrPost.status, 200);
+    assert.strictEqual(mgrPost.data.ok, true);
+
+    const mgrGet = await request({
+      hostname: 'localhost',
+      port: PORT,
+      path: '/api/evaluations/manager-eval',
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    assert.strictEqual(mgrGet.status, 200);
+    assert.strictEqual(mgrGet.data.ok, true);
+    assert.strictEqual(mgrGet.data.managerEvaluations[4].answers.mgr_sla, 5);
+    console.log('   ✅ /api/evaluations/manager-eval passed with 4 operational criteria!');
+
+    // 11. Fatima HR Evaluations Menu API
+    console.log('1️⃣1️⃣ Testing /api/evaluations/fatima-eval (HR Fatima)...');
+    const fatimaPost = await request({
+      hostname: 'localhost',
+      port: PORT,
+      path: '/api/evaluations/fatima-eval',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      }
+    }, {
+      evaluateeId: 4,
+      answers: { hr_culture: 5, hr_emergency: 4, hr_readiness: 5 },
+      notes: 'انضباط عالي والتزام بهوية شركة سماء الحلول',
+      isFinal: true
+    });
+    assert.strictEqual(fatimaPost.status, 200);
+    assert.strictEqual(fatimaPost.data.ok, true);
+
+    const fatimaGet = await request({
+      hostname: 'localhost',
+      port: PORT,
+      path: '/api/evaluations/fatima-eval',
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    assert.strictEqual(fatimaGet.status, 200);
+    assert.strictEqual(fatimaGet.data.ok, true);
+    assert.strictEqual(fatimaGet.data.fatimaEvaluations[4].answers.hr_culture, 5);
+    console.log('   ✅ /api/evaluations/fatima-eval passed with 3 HR criteria!');
+
+    // 12. Self Evaluation Menu API (Rate Yourself)
+    console.log('1️⃣2️⃣ Testing /api/evaluations/self (Employee Self Evaluation)...');
+    const selfPost = await request({
+      hostname: 'localhost',
+      port: PORT,
+      path: '/api/evaluations/self',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${employeeToken}`
+      }
+    }, {
+      answers: { self_time_pressure: 4, self_continuous_learning: 5, self_proactivity: 5 },
+      initiativeText: 'مبادرة تقليل تكرار مشاكل العملاء عبر أتمتة الردود',
+      isFinal: true
+    });
+    assert.strictEqual(selfPost.status, 200);
+    assert.strictEqual(selfPost.data.ok, true);
+
+    const selfGet = await request({
+      hostname: 'localhost',
+      port: PORT,
+      path: '/api/evaluations/self',
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${employeeToken}` }
+    });
+    assert.strictEqual(selfGet.status, 200);
+    assert.strictEqual(selfGet.data.ok, true);
+    assert.strictEqual(selfGet.data.selfEvaluation.answers.self_continuous_learning, 5);
+    console.log('   ✅ /api/evaluations/self passed with 3 criteria and initiative description!');
+
+    console.log('\n🎉 ALL 12 COMPREHENSIVE INTEGRATION & EVALUATION MENUS TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ Test failed:', err);
     process.exitCode = 1;
