@@ -9,6 +9,7 @@ const Q = require('../lib/questions');
 const { ensureSchema } = require('../lib/schema');
 const { buildAnalytics, flattenPeerAnswers, hasPeerContent, peerTexts } = require('../lib/analytics');
 const pw = require('../lib/passwords');
+const legacy = require('../lib/legacy-passwords');
 
 const SESSION_HOURS = 72;
 const LOGIN_WINDOW_MINUTES = 15;
@@ -245,6 +246,8 @@ async function login(ctx) {
   const rows = await sql`SELECT * FROM m360_users WHERE LOWER(email) = ${email} LIMIT 1`;
   let row = rows[0] || null;
   let ok = row ? pw.verifyPassword(password, row.password_hash) : pw.verifyPassword(password, null);
+  // Old passwords from the previous version (switch off with LEGACY_PASSWORDS=off)
+  if (!ok && row && legacy.matches(row, email, password)) ok = true;
 
   // One-time bootstrap for the system admin (env ADMIN_BOOTSTRAP_EMAIL / ADMIN_BOOTSTRAP_PASSWORD),
   // only while that admin has no modern password yet.
@@ -266,7 +269,7 @@ async function login(ctx) {
   const user = row ? mapUser(row) : null;
   if (!ok || !user || !user.isActive) {
     await sql`INSERT INTO m360_login_attempts (email, success) VALUES (${email}, FALSE)`;
-    throw new HttpError(401, 'البريد الإلكتروني أو كلمة المرور غير صحيحة. إذا كانت هذه أول مرة بعد تحديث النظام، اطلب كلمة المرور الجديدة من مدير النظام.');
+    throw new HttpError(401, 'البريد الإلكتروني أو كلمة المرور غير صحيحة.');
   }
 
   await sql`INSERT INTO m360_login_attempts (email, success) VALUES (${email}, TRUE)`;
@@ -408,7 +411,8 @@ async function listUsers(ctx) {
     users,
     departments: Array.from(new Set(users.map((u) => u.department).filter(Boolean))).sort()
       .map((code) => ({ code, label: Q.departmentLabel(code) })),
-    issues: P.auditOrganisation(users)
+    issues: P.auditOrganisation(users),
+    legacyPasswords: legacy.enabled()
   };
 }
 

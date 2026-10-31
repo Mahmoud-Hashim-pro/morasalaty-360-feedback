@@ -35,13 +35,22 @@ test('login: wrong password, unknown user and inactive user are rejected with th
   assert.equal(a.data.token, undefined);
 });
 
-test('login: the old shared passwords no longer work (legacy SHA-256 hashes are refused)', async () => {
-  const legacy = crypto.createHash('sha256').update('mora123').digest('hex');
-  await addUser(app.sql, { id: 50, name: 'قديم', email: 'legacy@x.test', department: 'TS', accessRole: 'employee', passwordHash: legacy });
-  for (const p of ['mora123', '123456', 'admin123', 'hradmin2024']) {
-    const r = await call('POST', '/auth/login', { email: 'legacy@x.test', password: p });
-    assert.equal(r.status, 401, p);
-  }
+test('login: old passwords from the previous version work again (switchable with LEGACY_PASSWORDS=off)', async () => {
+  const legacyHash = crypto.createHash('sha256').update('mora123').digest('hex');
+  await addUser(app.sql, { id: 50, name: 'قديم', email: 'legacy@x.test', department: 'TS', accessRole: 'employee', passwordHash: legacyHash });
+  const ok = async (email, p) => (await call('POST', '/auth/login', { email, password: p })).status;
+  assert.equal(await ok('legacy@x.test', 'mora123'), 200, 'own old password');
+  assert.equal(await ok('e1@x.test', 'mora123'), 200, 'shared old password works for any account, as before');
+  assert.equal(await ok('e1@x.test', '123456'), 200);
+  assert.equal(await ok('e1@x.test', 'admin123'), 401, 'admin-only old password is not accepted for employees');
+  assert.equal(await ok('admin@x.test', 'hradmin2024'), 200, 'old admin password for admin accounts');
+  assert.equal(await ok('off@x.test', 'mora123'), 401, 'deactivated accounts stay blocked');
+  assert.equal(await ok('e1@x.test', PASSWORD), 200, 'new passwords keep working too');
+  process.env.LEGACY_PASSWORDS = 'off';
+  for (const p of ['mora123', '123456']) assert.equal(await ok('legacy@x.test', p), 401, 'switched off: ' + p);
+  assert.equal(await ok('admin@x.test', 'hradmin2024'), 401);
+  delete process.env.LEGACY_PASSWORDS;
+  await app.sql`DELETE FROM m360_login_attempts`;
   await app.sql`DELETE FROM m360_users WHERE id = 50`;
 });
 

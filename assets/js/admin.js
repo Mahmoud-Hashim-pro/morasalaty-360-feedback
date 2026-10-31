@@ -42,7 +42,10 @@
     }
     U.users = r.data.users;
     U.departments = r.data.departments;
-    U.issues = r.data.issues;
+    U.issues = r.data.issues.slice();
+    if (r.data.legacyPasswords) {
+      U.issues.unshift({ level: 'warning', message: 'كلمات المرور القديمة مفعّلة (mora123 وغيرها تعمل لكل الحسابات). لإيقافها: أعطِ الجميع كلمات مرور جديدة ثم أضف LEGACY_PASSWORDS=off في إعدادات Vercel.' });
+    }
     drawUsers();
   }
 
@@ -233,7 +236,7 @@
   M.on('click', 'user-reset-all', async () => {
     const ok = await M.confirm('كلمات مرور جديدة للجميع',
       `<p>سيتم إنشاء كلمة مرور جديدة لكل الحسابات النشطة (ما عدا حسابك) وتسجيل خروجهم.</p>
-       <p class="muted" style="margin-top:8px">استخدم هذا مرة واحدة بعد التحديث، لأن كلمات المرور القديمة كانت منشورة ولم تعد تعمل.</p>`,
+       <p class="muted" style="margin-top:8px">ملاحظة: طالما كلمات المرور القديمة مفعّلة ستظل تعمل أيضاً حتى تضيف LEGACY_PASSWORDS=off في Vercel.</p>`,
       'إنشاء كلمات المرور', 'btn-danger');
     if (!ok) return;
     const r = await M.api('POST', '/admin/users/reset-passwords', {});
