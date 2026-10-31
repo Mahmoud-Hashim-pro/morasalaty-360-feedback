@@ -678,10 +678,6 @@ function renderColleaguesGrid() {
           </div>
           <span class="status-badge ${badgeClass}">${badgeText}</span>
         </div>
-        
-        <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px;">
-          <span class="badge-rel ${rel.badgeClass}">${rel.label}</span>
-        </div>
 
         <div class="colleague-progress">
           <div class="progress-bar">
@@ -874,7 +870,10 @@ function renderManagerMenu(targetEmpId) {
             <p>فريق ${target.team}</p>
           </div>
         </div>
-        <div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="startSurvey(${target.id}, 'managers')" style="box-shadow:0 4px 14px rgba(79,70,229,0.35);font-weight:700;">
+            <span>🚀 فتح شاشة التقييم التفاعلي (معياراً بمعيار)</span>
+          </button>
           ${evalRecord.isFinal 
             ? '<span class="status-badge badge-completed" style="font-size:0.85rem;padding:6px 16px;">✓ تم اعتماد التقييم النهائي للمدير</span>'
             : (Object.keys(answers).length > 0
@@ -994,9 +993,14 @@ function renderManagerMenu(targetEmpId) {
                   <td>${formatScorePill(ans.mgr_teamwork)}</td>
                   <td>${statusPill}</td>
                   <td>
-                    <button class="btn btn-sm ${isDone ? 'btn-ghost' : 'btn-outline'}" onclick="renderManagerMenu(${emp.id}); window.scrollTo({top: 180, behavior: 'smooth'});">
-                      ${isDone ? 'عرض التقييم' : 'تقييم الآن ←'}
-                    </button>
+                    <div style="display:flex;gap:6px;">
+                      <button class="btn btn-sm btn-primary" onclick="startSurvey(${emp.id}, 'managers')">
+                        <span>تقييم بالمعايير 🎯</span>
+                      </button>
+                      <button class="btn btn-sm ${isDone ? 'btn-ghost' : 'btn-outline'}" onclick="renderManagerMenu(${emp.id}); window.scrollTo({top: 180, behavior: 'smooth'});">
+                        ${isDone ? 'عرض' : 'سريع'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               `;
@@ -1139,7 +1143,10 @@ function renderFatimaMenu(targetEmpId) {
             <p>فريق ${target.team}</p>
           </div>
         </div>
-        <div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="startSurvey(${target.id}, 'fatima')" style="box-shadow:0 4px 14px rgba(79,70,229,0.35);font-weight:700;">
+            <span>🚀 فتح شاشة التقييم التفاعلي (معياراً بمعيار)</span>
+          </button>
           ${evalRecord.isFinal 
             ? '<span class="status-badge badge-completed" style="font-size:0.85rem;padding:6px 16px;">✓ تم اعتماد تقييم الموارد البشرية النهائي</span>'
             : (Object.keys(answers).length > 0
@@ -1257,9 +1264,14 @@ function renderFatimaMenu(targetEmpId) {
                   <td>${formatScorePill(ans.hr_readiness)}</td>
                   <td>${statusPill}</td>
                   <td>
-                    <button class="btn btn-sm ${isDone ? 'btn-ghost' : 'btn-outline'}" onclick="renderFatimaMenu(${emp.id}); window.scrollTo({top: 180, behavior: 'smooth'});">
-                      ${isDone ? 'عرض التقييم' : 'تقييم الآن ←'}
-                    </button>
+                    <div style="display:flex;gap:6px;">
+                      <button class="btn btn-sm btn-primary" onclick="startSurvey(${emp.id}, 'fatima')">
+                        <span>تقييم بالمعايير 🎯</span>
+                      </button>
+                      <button class="btn btn-sm ${isDone ? 'btn-ghost' : 'btn-outline'}" onclick="renderFatimaMenu(${emp.id}); window.scrollTo({top: 180, behavior: 'smooth'});">
+                        ${isDone ? 'عرض' : 'سريع'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               `;
@@ -1465,9 +1477,9 @@ function setSurveyMode(mode) {
   renderSurvey();
 }
 
-function startSurvey(evaluateeId) {
-  // Prevent self evaluation strictly
-  if (currentUser && evaluateeId === currentUser.id) {
+function startSurvey(evaluateeId, type = 'peers') {
+  // Prevent self evaluation strictly for peers
+  if (currentUser && evaluateeId === currentUser.id && type === 'peers') {
     alert("تنبيه: لا يمكنك تقييم نفسك وفق معايير التقييم المتبادل 360°.");
     return;
   }
@@ -1477,14 +1489,18 @@ function startSurvey(evaluateeId) {
 
   const key = `${currentUser.id}_${evaluateeId}`;
   const existing = EVAL_DATA[key];
-  if (existing && existing.status === 'completed') {
+  if (type === 'peers' && existing && existing.status === 'completed') {
     showCompletedConfidentialModal(evaluatee.name);
     return;
   }
 
   currentSurvey.evaluateeId = evaluateeId;
+  currentSurvey.type = type;
   currentSurvey.page = 1;
   currentSurvey.moduleIndex = 0;
+  if (type === 'managers' || type === 'fatima' || type === 'peers') {
+    currentActiveEvalMenu = type;
+  }
 
   if (!EVAL_DATA[key]) {
     EVAL_DATA[key] = {
@@ -1501,6 +1517,26 @@ function startSurvey(evaluateeId) {
 
   showScreen('screen-survey');
   renderSurvey();
+}
+
+function switchSurveyType(type) {
+  currentSurvey.type = type;
+  currentSurvey.page = 1;
+  if (type === 'managers' || type === 'fatima' || type === 'peers') {
+    currentActiveEvalMenu = type;
+  }
+  renderSurvey();
+  const scrollArea = document.getElementById('survey-scroll-container') || document.querySelector('.survey-content-area') || window;
+  if (scrollArea && scrollArea.scrollTo) scrollArea.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function scrollToSurveyCard(cardId) {
+  const el = document.getElementById(cardId);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('q-highlight');
+    setTimeout(() => el.classList.remove('q-highlight'), 1200);
+  }
 }
 
 function goToDashboard() {
@@ -1601,6 +1637,7 @@ function renderSurvey() {
   const ev = EVAL_DATA[key] || { moduleAnswers: {}, textAnswers: {}, managerAnswers: {} };
   const rel = getRelationship(currentUser, evaluatee);
   if (!currentSurvey.page) currentSurvey.page = 1;
+  const type = currentSurvey.type || 'peers';
 
   // Sidebar Avatar & Profile
   const sAvatar = document.getElementById('survey-avatar');
@@ -1617,7 +1654,117 @@ function renderSurvey() {
     sRel.style.display = 'none';
   }
 
-  // Count done questions
+  // Update switcher tabs in sidebar
+  document.querySelectorAll('.survey-type-tab').forEach(t => t.classList.remove('active'));
+  const activeSwitcherTab = document.getElementById(`st-tab-${type}`);
+  if (activeSwitcherTab) activeSwitcherTab.classList.add('active');
+
+  const mainContainer = document.getElementById('survey-main');
+  const firstName = evaluatee.name.split(' ')[0];
+  const critTitleEl = document.getElementById('sidebar-criteria-title');
+  const sbModules = document.getElementById('sidebar-modules');
+  const doneBadge = document.getElementById('sidebar-done-badge');
+  const progText = document.getElementById('survey-progress-text');
+  const progFill = document.getElementById('survey-progress-fill');
+
+  // =========================================================
+  // TYPE 1: MANAGER SURVEY (Tariq & Hashim - 4 criteria + notes)
+  // =========================================================
+  if (type === 'managers') {
+    if (critTitleEl) critTitleEl.innerText = 'معايير تقييم المديرين (4)';
+    const mgrEval = MANAGER_EVAL_DATA[evaluatee.id] || { answers: {}, notes: '', isFinal: false };
+    const ans = mgrEval.answers || {};
+
+    let doneCount = 0;
+    MANAGER_EVAL_QUESTIONS.forEach(q => {
+      if (ans[q.id] !== undefined && ans[q.id] !== null) doneCount++;
+    });
+    const totalQ = MANAGER_EVAL_QUESTIONS.length;
+    const pct = Math.round((doneCount / totalQ) * 100);
+
+    if (progText) progText.innerText = `${pct}% مكتمل | المعيار ${doneCount} من ${totalQ} (تقييم المدير)`;
+    if (progFill) progFill.style.width = `${pct}%`;
+    if (doneBadge) doneBadge.innerText = `${doneCount} من ${totalQ}`;
+
+    if (sbModules) {
+      sbModules.innerHTML = `
+        ${MANAGER_EVAL_QUESTIONS.map(q => {
+          const isDone = ans[q.id] !== undefined && ans[q.id] !== null;
+          return `
+            <div class="sidebar-item ${isDone ? 'done' : ''}" onclick="scrollToSurveyCard('mgr-survey-card-${q.id}')">
+              <div class="sidebar-item-content">
+                <span class="sidebar-item-icon">${q.icon}</span>
+                <span title="${q.title}">${q.num}. ${q.title}</span>
+              </div>
+              <span class="sidebar-item-status">${isDone ? '✓' : ''}</span>
+            </div>
+          `;
+        }).join('')}
+        <div class="sidebar-item ${mgrEval.notes && mgrEval.notes.trim() ? 'done' : ''}" onclick="scrollToSurveyCard('mgr-survey-card-notes')">
+          <div class="sidebar-item-content">
+            <span class="sidebar-item-icon">📝</span>
+            <span title="التوجيهات التشغيلية">5. التوجيهات التشغيلية</span>
+          </div>
+          <span class="sidebar-item-status">${mgrEval.notes && mgrEval.notes.trim() ? '✓' : ''}</span>
+        </div>
+      `;
+    }
+
+    renderManagerSurveyCards(mainContainer, evaluatee, mgrEval, ans);
+    return;
+  }
+
+  // =========================================================
+  // TYPE 2: FATIMA HR SURVEY (3 criteria + notes)
+  // =========================================================
+  if (type === 'fatima') {
+    if (critTitleEl) critTitleEl.innerText = 'معايير الموارد البشرية (3)';
+    const fatimaEval = FATIMA_EVAL_DATA[evaluatee.id] || { answers: {}, notes: '', isFinal: false };
+    const ans = fatimaEval.answers || {};
+
+    let doneCount = 0;
+    FATIMA_HR_QUESTIONS.forEach(q => {
+      if (ans[q.id] !== undefined && ans[q.id] !== null) doneCount++;
+    });
+    const totalQ = FATIMA_HR_QUESTIONS.length;
+    const pct = Math.round((doneCount / totalQ) * 100);
+
+    if (progText) progText.innerText = `${pct}% مكتمل | المعيار ${doneCount} من ${totalQ} (تقييم فاطمة)`;
+    if (progFill) progFill.style.width = `${pct}%`;
+    if (doneBadge) doneBadge.innerText = `${doneCount} من ${totalQ}`;
+
+    if (sbModules) {
+      sbModules.innerHTML = `
+        ${FATIMA_HR_QUESTIONS.map(q => {
+          const isDone = ans[q.id] !== undefined && ans[q.id] !== null;
+          return `
+            <div class="sidebar-item ${isDone ? 'done' : ''}" onclick="scrollToSurveyCard('fatima-survey-card-${q.id}')">
+              <div class="sidebar-item-content">
+                <span class="sidebar-item-icon">${q.icon}</span>
+                <span title="${q.title}">${q.num}. ${q.title}</span>
+              </div>
+              <span class="sidebar-item-status">${isDone ? '✓' : ''}</span>
+            </div>
+          `;
+        }).join('')}
+        <div class="sidebar-item ${fatimaEval.notes && fatimaEval.notes.trim() ? 'done' : ''}" onclick="scrollToSurveyCard('fatima-survey-card-notes')">
+          <div class="sidebar-item-content">
+            <span class="sidebar-item-icon">📝</span>
+            <span title="توصية الموارد البشرية">4. توصية الموارد البشرية</span>
+          </div>
+          <span class="sidebar-item-status">${fatimaEval.notes && fatimaEval.notes.trim() ? '✓' : ''}</span>
+        </div>
+      `;
+    }
+
+    renderFatimaSurveyCards(mainContainer, evaluatee, fatimaEval, ans);
+    return;
+  }
+
+  // =========================================================
+  // TYPE 3: PEERS SURVEY (8 composite modules)
+  // =========================================================
+  if (critTitleEl) critTitleEl.innerText = 'معايير التقييم (8)';
   let doneCount = 0;
   for (let m = 1; m <= MODULES.length; m++) {
     const modAns = ev.moduleAnswers?.['m' + m];
@@ -1627,22 +1774,16 @@ function renderSurvey() {
   }
   const pct = Math.round((doneCount / MODULES.length) * 100);
 
-  // Top Header Progress & Text (Matching screenshot)
-  const progText = document.getElementById('survey-progress-text');
   if (progText) {
     progText.innerText = `${pct}% مكتمل | السؤال ${doneCount} من ${MODULES.length}`;
   }
-  const progFill = document.getElementById('survey-progress-fill');
   if (progFill) {
     progFill.style.width = `${pct}%`;
   }
-  const doneBadge = document.getElementById('sidebar-done-badge');
   if (doneBadge) {
     doneBadge.innerText = `${doneCount} من ${MODULES.length}`;
   }
 
-  // Sidebar Modules List (Matching screenshot)
-  const sbModules = document.getElementById('sidebar-modules');
   if (sbModules) {
     sbModules.innerHTML = MODULES.map(m => {
       const modAns = ev.moduleAnswers?.['m' + m.id];
@@ -1660,10 +1801,235 @@ function renderSurvey() {
     }).join('');
   }
 
-  const mainContainer = document.getElementById('survey-main');
+  renderUnifiedSurvey(mainContainer, evaluatee, ev, firstName, rel, doneCount, pct);
+}
+
+function renderManagerSurveyCards(container, evaluatee, mgrEval, answers) {
+  if (!container) return;
   const firstName = evaluatee.name.split(' ')[0];
 
-  renderUnifiedSurvey(mainContainer, evaluatee, ev, firstName, rel, doneCount, pct);
+  container.innerHTML = `
+    <!-- Top Mode Indicator Banner -->
+    <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.95);border:1px solid rgba(226,232,240,0.9);border-radius:16px;padding:12px 20px;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.4rem;">👔</span>
+        <div>
+          <strong style="color:var(--text);font-size:0.95rem;">قائمة تقييم المديرين (طارق وهاشم) — الموظف: ${evaluatee.name}</strong>
+          <div style="font-size:0.76rem;color:var(--text-muted);">تقييم تشغيلي تفصيلي • معايير SLA وإدارة الأزمات والتوثيق</div>
+        </div>
+      </div>
+      <div>
+        ${mgrEval.isFinal 
+          ? '<span class="status-badge badge-completed">✓ التقييم معتمد</span>'
+          : '<span class="status-badge badge-in-progress">⏳ مسودة قيد التقييم</span>'
+        }
+      </div>
+    </div>
+
+    <!-- Question Cards for 4 Manager Questions -->
+    ${MANAGER_EVAL_QUESTIONS.map(q => {
+      const currentVal = answers[q.id];
+      const isAnswered = currentVal !== undefined && currentVal !== null;
+      const isNA = currentVal === 0 || currentVal === 'na';
+      const promptText = q.text.replace(/الموظف/g, `<span style="color:#4F46E5;font-weight:800;">${firstName}</span>`);
+      const fillPct = (typeof currentVal === 'number' && currentVal >= 1 && currentVal <= 5) ? Math.round(((currentVal - 1) / 4) * 100) : 0;
+
+      return `
+        <div class="q-compact-card ${isAnswered ? 'answered' : ''}" id="mgr-survey-card-${q.id}">
+          <div class="q-card-header">
+            <div class="q-card-tag">
+              <span>${q.icon}</span>
+              <span>بطاقة المعيار ${q.num} من 4: ${q.title}</span>
+            </div>
+            <span class="q-status-badge ${isAnswered ? 'done' : 'pending'}">
+              ${isAnswered ? 'تم التقييم ✓' : 'بانتظار التقييم'}
+            </span>
+          </div>
+
+          <div class="q-prompt-title">${promptText}</div>
+
+          <!-- Stepper 1-5 -->
+          <div class="stepper-container">
+            <div class="stepper-line-bg"></div>
+            <div class="stepper-line-fill" style="width: ${fillPct}%;"></div>
+            <div class="stepper-steps-row">
+              ${[1, 2, 3, 4, 5].map(stepVal => {
+                const isActive = currentVal === stepVal;
+                return `
+                  <div class="stepper-step-col ${isActive ? 'active' : ''}" onclick="setSurveyManagerRating('${q.id}', ${stepVal})">
+                    <div class="stepper-circle">${stepVal}</div>
+                    <div class="stepper-step-label">${getStepLabel(stepVal)}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+            <!-- Discrete N/A Pill -->
+            <div class="stepper-na-row">
+              <div class="stepper-na-pill ${isNA ? 'active' : ''}" onclick="setSurveyManagerRating('${q.id}', 0)">
+                <span class="stepper-na-dot"></span>
+                <span>لا ينطبق / لا أملك معلومات كافية</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('')}
+
+    <!-- Notes Card -->
+    <div class="q-compact-card" id="mgr-survey-card-notes">
+      <div class="q-card-header">
+        <div class="q-card-tag">
+          <span>📝</span>
+          <span>المعيار 5: خانة التوجيهات والملاحظات التشغيلية للمدير المباشر</span>
+        </div>
+      </div>
+      <div class="q-prompt-title">أضف أي ملاحظات وتوجيهات تشغيلية للموظف ${firstName} حول إدارة التذاكر وجودة الحل:</div>
+      <textarea class="text-answer" placeholder="اكتب ملاحظاتك وتوجيهاتك هنا..." oninput="updateManagerNotes(${evaluatee.id}, this.value)">${mgrEval.notes || ''}</textarea>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="survey-flow-bar">
+      <button type="button" class="survey-flow-btn-prev" onclick="goToDashboard()">
+        <span>← العودة للرئيسية</span>
+      </button>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn btn-outline" onclick="saveSurveyManagerDraft()">
+          <span>💾 حفظ المسودة</span>
+        </button>
+        <button type="button" class="survey-flow-btn-submit" onclick="submitSurveyManagerFinal()">
+          <span>اعتماد تقييم المدير النهائي 🚀</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderFatimaSurveyCards(container, evaluatee, fatimaEval, answers) {
+  if (!container) return;
+  const firstName = evaluatee.name.split(' ')[0];
+
+  container.innerHTML = `
+    <!-- Top Mode Indicator Banner -->
+    <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.95);border:1px solid rgba(226,232,240,0.9);border-radius:16px;padding:12px 20px;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.4rem;">📋</span>
+        <div>
+          <strong style="color:var(--text);font-size:0.95rem;">قائمة تقييم الموارد البشرية (فاطمة) — الموظف: ${evaluatee.name}</strong>
+          <div style="font-size:0.76rem;color:var(--text-muted);">تقييم إداري تفصيلي • ثقافة سماء الحلول، المرونة في الطوارئ، والجاهزية</div>
+        </div>
+      </div>
+      <div>
+        ${fatimaEval.isFinal 
+          ? '<span class="status-badge badge-completed">✓ التقييم معتمد</span>'
+          : '<span class="status-badge badge-in-progress">⏳ مسودة قيد التقييم</span>'
+        }
+      </div>
+    </div>
+
+    <!-- Question Cards for 3 HR Questions -->
+    ${FATIMA_HR_QUESTIONS.map(q => {
+      const currentVal = answers[q.id];
+      const isAnswered = currentVal !== undefined && currentVal !== null;
+      const isNA = currentVal === 0 || currentVal === 'na';
+      const promptText = q.text.replace(/الموظف/g, `<span style="color:#4F46E5;font-weight:800;">${firstName}</span>`);
+      const fillPct = (typeof currentVal === 'number' && currentVal >= 1 && currentVal <= 5) ? Math.round(((currentVal - 1) / 4) * 100) : 0;
+
+      return `
+        <div class="q-compact-card ${isAnswered ? 'answered' : ''}" id="fatima-survey-card-${q.id}">
+          <div class="q-card-header">
+            <div class="q-card-tag">
+              <span>${q.icon}</span>
+              <span>بطاقة المعيار ${q.num} من 3: ${q.title}</span>
+            </div>
+            <span class="q-status-badge ${isAnswered ? 'done' : 'pending'}">
+              ${isAnswered ? 'تم التقييم ✓' : 'بانتظار التقييم'}
+            </span>
+          </div>
+
+          <div class="q-prompt-title">${promptText}</div>
+
+          <!-- Stepper 1-5 -->
+          <div class="stepper-container">
+            <div class="stepper-line-bg"></div>
+            <div class="stepper-line-fill" style="width: ${fillPct}%;"></div>
+            <div class="stepper-steps-row">
+              ${[1, 2, 3, 4, 5].map(stepVal => {
+                const isActive = currentVal === stepVal;
+                return `
+                  <div class="stepper-step-col ${isActive ? 'active' : ''}" onclick="setSurveyFatimaRating('${q.id}', ${stepVal})">
+                    <div class="stepper-circle">${stepVal}</div>
+                    <div class="stepper-step-label">${getStepLabel(stepVal)}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+            <!-- Discrete N/A Pill -->
+            <div class="stepper-na-row">
+              <div class="stepper-na-pill ${isNA ? 'active' : ''}" onclick="setSurveyFatimaRating('${q.id}', 0)">
+                <span class="stepper-na-dot"></span>
+                <span>لا ينطبق / لا أملك معلومات كافية</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('')}
+
+    <!-- Notes Card -->
+    <div class="q-compact-card" id="fatima-survey-card-notes">
+      <div class="q-card-header">
+        <div class="q-card-tag">
+          <span>📝</span>
+          <span>المعيار 4: خانة الملاحظات الإدارية وتوصية الموارد البشرية</span>
+        </div>
+      </div>
+      <div class="q-prompt-title">أضف تقرير وتوصية الموارد البشرية حول سلوك وانضباط الموظف ${firstName}:</div>
+      <textarea class="text-answer" placeholder="اكتب الملاحظات والتوصية الإدارية هنا..." oninput="updateFatimaNotes(${evaluatee.id}, this.value)">${fatimaEval.notes || ''}</textarea>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="survey-flow-bar">
+      <button type="button" class="survey-flow-btn-prev" onclick="goToDashboard()">
+        <span>← العودة للرئيسية</span>
+      </button>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn btn-outline" onclick="saveSurveyFatimaDraft()">
+          <span>💾 حفظ المسودة</span>
+        </button>
+        <button type="button" class="survey-flow-btn-submit" onclick="submitSurveyFatimaFinal()">
+          <span>اعتماد تقييم الموارد البشرية 🚀</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function setSurveyManagerRating(fieldId, val) {
+  const evaluateeId = currentSurvey.evaluateeId;
+  setManagerRating(fieldId, val, evaluateeId);
+  renderSurvey();
+}
+
+function saveSurveyManagerDraft() {
+  saveManagerDraft(currentSurvey.evaluateeId);
+}
+
+function submitSurveyManagerFinal() {
+  submitManagerFinal(currentSurvey.evaluateeId);
+}
+
+function setSurveyFatimaRating(fieldId, val) {
+  const evaluateeId = currentSurvey.evaluateeId;
+  setFatimaRating(fieldId, val, evaluateeId);
+  renderSurvey();
+}
+
+function saveSurveyFatimaDraft() {
+  saveFatimaDraft(currentSurvey.evaluateeId);
+}
+
+function submitSurveyFatimaFinal() {
+  submitFatimaFinal(currentSurvey.evaluateeId);
 }
 
 function goToSurveyQuestion(id) {

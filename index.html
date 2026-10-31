@@ -175,6 +175,39 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   margin-top: 6px;
 }
 
+.survey-type-switcher {
+  display: flex;
+  gap: 4px;
+  background: rgba(30, 41, 59, 0.7);
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.survey-type-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 7px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+.survey-type-tab:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.08);
+}
+.survey-type-tab.active {
+  background: #4F46E5;
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.45);
+}
+
 .sidebar-nav-container {
   background: rgba(30, 41, 59, 0.45);
   border-radius: 16px;
@@ -1257,9 +1290,15 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <div class="sidebar-user-name" id="survey-name"></div>
         <div class="sidebar-user-role" id="survey-role"></div>
       </div>
+      <!-- Survey Evaluation Mode Switcher -->
+      <div class="survey-type-switcher" id="survey-type-switcher">
+        <button type="button" class="survey-type-tab active" id="st-tab-peers" onclick="switchSurveyType('peers')">👥 الزملاء (8)</button>
+        <button type="button" class="survey-type-tab" id="st-tab-managers" onclick="switchSurveyType('managers')">👔 المدير (4)</button>
+        <button type="button" class="survey-type-tab" id="st-tab-fatima" onclick="switchSurveyType('fatima')">📋 فاطمة (3)</button>
+      </div>
       <div class="sidebar-nav-container">
         <div class="sidebar-nav-header">
-          <span>معايير التقييم (8)</span>
+          <span id="sidebar-criteria-title">معايير التقييم (8)</span>
           <span id="sidebar-done-badge" style="font-size:0.75rem;color:#818CF8;font-weight:700;"></span>
         </div>
         <div class="sidebar-modules-list" id="sidebar-modules"></div>
