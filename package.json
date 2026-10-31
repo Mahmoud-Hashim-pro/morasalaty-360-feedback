@@ -7,21 +7,30 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node test/api_test.js",
-    "db:init": "node scripts/init_db.js"
+    "dev:local": "node server.js --local",
+    "dev:demo": "node server.js --demo",
+    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "db:init": "node scripts/init_db.js",
+    "set-password": "node scripts/set_password.js"
   },
   "keywords": [
     "360-degree-feedback",
     "hr-analytics",
-    "drag-and-drop",
     "morasalaty",
     "samaagroup",
     "neon-postgres",
-    "vercel"
+    "vercel",
+    "analytics"
   ],
   "author": "Mahmoud Hashim",
   "license": "UNLICENSED",
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.14"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

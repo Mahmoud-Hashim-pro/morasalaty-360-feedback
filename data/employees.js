@@ -175,63 +175,29 @@ const EMPLOYEES = [
   }
 ];
 
-// كلمة المرور الموحدة السهلة لجميع الموظفين
-const UNIFORM_PASSWORD = "mora123";
+// ---------------------------------------------------------
+// لا توجد أي كلمات مرور في هذا الملف.
+// كلمات المرور تُنشأ عشوائياً من شاشة «المستخدمون والصلاحيات»
+// أو عبر: npm run set-password -- user@email
+// ---------------------------------------------------------
 
-// خريطة كلمات المرور المعتمدة لجميع الحسابات
-const DEMO_PASSWORDS = {
-  // صاحب المنصة والمدير العام (Super Admin / Owner)
-  "mahmoud@tieapps.com":           "mora123",
-  
-  // الـ 17 موظفاً (كلمة مرور موحدة سهلة للإرسال: mora123)
-  "hazem.khaled@samaagroup.net":    "mora123",
-  "ibrahim.nasser@samaagroup.net":  "mora123",
-  "a.hashim@samaagroup.net":        "mora123",
-  "ahmed.tarek@samaagroup.net":     "mora123",
-  "bahaa.ayman@samaagroup.net":     "mora123",
-  "ziad.mady@samaagroup.net":       "mora123",
-  "abdelrahman@samaagroup.net":     "mora123",
-  "mahmoud.hashim@samaagroup.net":  "mora123",
-  "a.taha@samaagroup.net":          "mora123",
-  "mohamed.ragab@samaagroup.net":   "mora123",
-  "ibrahim.hassan@samaagroup.net":  "mora123",
-  "esraa.hamed@samaagroup.net":     "mora123",
-  "salma.essam@samaagroup.net":     "mora123",
-  "fatma.shabana@samaagroup.net":   "mora123",
-  "mohamed.refaay@samaagroup.net":  "mora123",
-  "mohamed.ezzat@samaagroup.net":   "mora123",
-  "m.farrag@samaagroup.net":        "mora123",
-
-  // حساب إدارة الموارد البشرية
-  "hr.admin@samaagroup.net":        "mora123",
-  "hr.admin@morasalaty.com":        "mora123"
+// الأدوار الافتراضية عند أول تشغيل (يمكن تعديلها لاحقاً من شاشة المستخدمين)
+//   manager : مدير إدارة — يقيّم موظفي إدارته
+//   hr      : الموارد البشرية — تقييم إداري لكل الموظفين
+//   (الباقي employee)
+const DEFAULT_ACCESS_ROLES = {
+  "ahmed.tarek@samaagroup.net": "manager",     // الدعم الفني (TS)
+  "mahmoud.hashim@samaagroup.net": "manager",  // الإدارة (Admin)
+  "a.taha@samaagroup.net": "manager",          // المبيعات (Sales)
+  "fatma.shabana@samaagroup.net": "hr"
 };
 
-// حساب صاحب المنصة والمدير العام
-const SUPER_ADMIN = {
-  id: 99,
-  name: "محمود هاشم",
-  email: "mahmoud@tieapps.com",
-  role: "مالك المنصة والمدير العام (Platform Owner & Super Admin)",
-  team: "Admin",
-  isManager: true,
-  managerId: null,
-  isHRAdmin: true,
-  isSuperAdmin: true,
-  channels: { instagram: true, otherEmail: true, twitter: true, samaaChat: true, morasalatyChat: true, messenger: true, whatsappMorasalaty: true, whatsappSamaa: true }
-};
-
-// حساب HR Admin الإداري
-const HR_ADMIN = {
-  id: 0,
-  name: "مدير الموارد البشرية",
-  email: "hr.admin@samaagroup.net",
-  role: "HR Admin",
-  team: "Admin",
-  isHRAdmin: true,
-  isManager: true
-};
+// حسابات مدير النظام (لا تشارك في التقييم — ترى النتائج وتدير المستخدمين)
+const ADMIN_ACCOUNTS = [
+  { id: 99, name: "محمود هاشم (مدير النظام)", email: "mahmoud@tieapps.com", team: "Admin" },
+  { id: 0, name: "حساب الموارد البشرية (النتائج)", email: "hr.admin@samaagroup.net", team: "Admin" }
+];
 
 if (typeof module !== 'undefined') {
-  module.exports = { EMPLOYEES, DEMO_PASSWORDS, UNIFORM_PASSWORD, HR_ADMIN, SUPER_ADMIN };
+  module.exports = { EMPLOYEES, DEFAULT_ACCESS_ROLES, ADMIN_ACCOUNTS };
 }
