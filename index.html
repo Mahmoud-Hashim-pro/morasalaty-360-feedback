@@ -1213,7 +1213,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <button class="eval-tab-btn" id="tab-btn-managers" onclick="switchEvalMenu('managers', this)">
         <span class="eval-tab-icon">👔</span>
         <div class="eval-tab-info">
-          <span class="eval-tab-title">قائمة تقييم المديرين (طارق وهاشم)</span>
+          <span class="eval-tab-title">قائمة تقييم المديرين</span>
           <span class="eval-tab-desc">4 خانات تشغيلية • SLA وإدارة الأزمات</span>
         </div>
         <span class="eval-tab-badge badge-mgr">قائمة المديرين</span>
@@ -1222,10 +1222,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <button class="eval-tab-btn" id="tab-btn-fatima" onclick="switchEvalMenu('fatima', this)">
         <span class="eval-tab-icon">📋</span>
         <div class="eval-tab-info">
-          <span class="eval-tab-title">قائمة تقييم الموارد البشرية (فاطمة)</span>
+          <span class="eval-tab-title">قائمة تقييم الموارد البشرية</span>
           <span class="eval-tab-desc">3 خانات إدارية • ثقافة سماء الحلول</span>
         </div>
-        <span class="eval-tab-badge badge-hr">قائمة فاطمة</span>
+        <span class="eval-tab-badge badge-hr">الموارد البشرية</span>
       </button>
 
       <button class="eval-tab-btn" id="tab-btn-self" onclick="switchEvalMenu('self', this)">
@@ -1294,7 +1294,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <div class="survey-type-switcher" id="survey-type-switcher">
         <button type="button" class="survey-type-tab active" id="st-tab-peers" onclick="switchSurveyType('peers')">👥 الزملاء (8)</button>
         <button type="button" class="survey-type-tab" id="st-tab-managers" onclick="switchSurveyType('managers')">👔 المدير (4)</button>
-        <button type="button" class="survey-type-tab" id="st-tab-fatima" onclick="switchSurveyType('fatima')">📋 فاطمة (3)</button>
+        <button type="button" class="survey-type-tab" id="st-tab-fatima" onclick="switchSurveyType('fatima')">📋 الموارد البشرية (3)</button>
       </div>
       <div class="sidebar-nav-container">
         <div class="sidebar-nav-header">
@@ -1361,8 +1361,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <div class="hr-nav-item active" onclick="hrNav('overview',this)"><span class="hr-nav-icon">🏠</span>نظرة عامة</div>
       <div class="hr-nav-item" onclick="hrNav('completion',this)"><span class="hr-nav-icon">✅</span>متابعة الإكمال</div>
       <div class="hr-nav-item" onclick="switchToEmployeeView()" style="background:#EEF2FF;color:#4338CA;font-weight:700;margin:4px 0;"><span class="hr-nav-icon">👥</span>واجهة تقييم الزملاء (الموظف)</div>
-      <div class="hr-nav-item" onclick="switchToEvalMenuFromHR('managers')" style="background:#FFFBEB;color:#B45309;font-weight:700;margin:4px 0;"><span class="hr-nav-icon">👔</span>قائمة تقييم المديرين (طارق وهاشم)</div>
-      <div class="hr-nav-item" onclick="switchToEvalMenuFromHR('fatima')" style="background:#FAF5FF;color:#7E22CE;font-weight:700;margin:4px 0;"><span class="hr-nav-icon">📋</span>قائمة تقييم الموارد البشرية (فاطمة)</div>
+      <div class="hr-nav-item" onclick="switchToEvalMenuFromHR('managers')" style="background:#FFFBEB;color:#B45309;font-weight:700;margin:4px 0;"><span class="hr-nav-icon">👔</span>قائمة تقييم المديرين</div>
+      <div class="hr-nav-item" onclick="switchToEvalMenuFromHR('fatima')" style="background:#FAF5FF;color:#7E22CE;font-weight:700;margin:4px 0;"><span class="hr-nav-icon">📋</span>قائمة تقييم الموارد البشرية</div>
       <div class="hr-nav-item" onclick="switchToEvalMenuFromHR('self')" style="background:#F0FDF4;color:#15803D;font-weight:700;margin:4px 0;"><span class="hr-nav-icon">🌟</span>قائمة قيّم نفسك (التقييم الذاتي)</div>
       <div class="hr-nav-item" onclick="hrNav('employees',this)"><span class="hr-nav-icon">👥</span>تقارير الموظفين</div>
       <div class="hr-nav-item" onclick="hrNav('teams',this)"><span class="hr-nav-icon">🏢</span>تقارير الفرق</div>

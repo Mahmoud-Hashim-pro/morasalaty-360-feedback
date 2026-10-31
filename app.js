@@ -816,7 +816,7 @@ function renderManagerMenu(targetEmpId) {
     <!-- Hero Banner -->
     <div class="eval-hero-banner">
       <div class="eval-hero-info">
-        <h2><span>👔</span> قائمة تقييم المديرين (طارق وهاشم)</h2>
+        <h2><span>👔</span> قائمة تقييم المديرين</h2>
         <p>التركيز على المقاييس التشغيلية الدقيقة، ومعدلات وقت الحل (SLA)، والتعامل مع الأزمات والضغط الفجائي (Peak)، وجودة التوثيق والعمل الجماعي.</p>
       </div>
       <div class="eval-hero-stats">
@@ -953,7 +953,7 @@ function renderManagerMenu(targetEmpId) {
     <div class="eval-table-section">
       <div class="eval-table-title">
         <span>📊</span>
-        <span>جدول متابعة تقييم المديرين (طارق وهاشم) لجميع موظفي الشركة (17 موظفاً):</span>
+        <span>جدول متابعة تقييم المديرين لجميع موظفي الشركة (17 موظفاً):</span>
       </div>
       <div class="completion-table">
         <table>
@@ -1089,7 +1089,7 @@ function renderFatimaMenu(targetEmpId) {
     <!-- Hero Banner -->
     <div class="eval-hero-banner fatima-theme">
       <div class="eval-hero-info">
-        <h2><span>📋</span> قائمة تقييم الموارد البشرية والشؤون الإدارية (فاطمة)</h2>
+        <h2><span>📋</span> قائمة تقييم الموارد البشرية والشؤون الإدارية</h2>
         <p>قياس الاستقرار، المرونة في الطوارئ والمناوبات الاستثنائية، الالتزام بمعايير وثقافة شركة سماء الحلول، والجاهزية والاستجابة الإدارية.</p>
       </div>
       <div class="eval-hero-stats">
@@ -1139,7 +1139,7 @@ function renderFatimaMenu(targetEmpId) {
             ${getInitials(target.name)}
           </div>
           <div class="eval-emp-details">
-            <h3>تقييم الموارد البشرية (فاطمة) للموظف: ${target.name}</h3>
+            <h3>تقييم الموارد البشرية للموظف: ${target.name}</h3>
             <p>فريق ${target.team}</p>
           </div>
         </div>
@@ -1226,7 +1226,7 @@ function renderFatimaMenu(targetEmpId) {
     <div class="eval-table-section">
       <div class="eval-table-title">
         <span>📊</span>
-        <span>جدول متابعة تقييم الموارد البشرية (فاطمة) لجميع موظفي الشركة (17 موظفاً):</span>
+        <span>جدول متابعة تقييم الموارد البشرية لجميع موظفي الشركة (17 موظفاً):</span>
       </div>
       <div class="completion-table">
         <table>
@@ -1729,7 +1729,7 @@ function renderSurvey() {
     const totalQ = FATIMA_HR_QUESTIONS.length;
     const pct = Math.round((doneCount / totalQ) * 100);
 
-    if (progText) progText.innerText = `${pct}% مكتمل | المعيار ${doneCount} من ${totalQ} (تقييم فاطمة)`;
+    if (progText) progText.innerText = `${pct}% مكتمل | المعيار ${doneCount} من ${totalQ} (تقييم الموارد البشرية)`;
     if (progFill) progFill.style.width = `${pct}%`;
     if (doneBadge) doneBadge.innerText = `${doneCount} من ${totalQ}`;
 
@@ -1814,7 +1814,7 @@ function renderManagerSurveyCards(container, evaluatee, mgrEval, answers) {
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:1.4rem;">👔</span>
         <div>
-          <strong style="color:var(--text);font-size:0.95rem;">قائمة تقييم المديرين (طارق وهاشم) — الموظف: ${evaluatee.name}</strong>
+          <strong style="color:var(--text);font-size:0.95rem;">قائمة تقييم المديرين — الموظف: ${evaluatee.name}</strong>
           <div style="font-size:0.76rem;color:var(--text-muted);">تقييم تشغيلي تفصيلي • معايير SLA وإدارة الأزمات والتوثيق</div>
         </div>
       </div>
@@ -1914,7 +1914,7 @@ function renderFatimaSurveyCards(container, evaluatee, fatimaEval, answers) {
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:1.4rem;">📋</span>
         <div>
-          <strong style="color:var(--text);font-size:0.95rem;">قائمة تقييم الموارد البشرية (فاطمة) — الموظف: ${evaluatee.name}</strong>
+          <strong style="color:var(--text);font-size:0.95rem;">قائمة تقييم الموارد البشرية — الموظف: ${evaluatee.name}</strong>
           <div style="font-size:0.76rem;color:var(--text-muted);">تقييم إداري تفصيلي • ثقافة سماء الحلول، المرونة في الطوارئ، والجاهزية</div>
         </div>
       </div>
